@@ -12,15 +12,22 @@
   --font-narrative: "Source Serif 4", Georgia, serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
-  /* Surfaces and ink — light (default in :root, overridden dark below) */
-  --color-page: #F1F3F4;
-  --color-surface: #FAFBFB;
+  /* Surfaces and ink — light (default in :root, overridden dark below).
+     One theme app-wide: white cards on a soft slate ground, indigo accent. */
+  --color-page: #F6F7FB;
+  --color-surface: #FFFFFF;
   --color-surface-raised: #FFFFFF;
-  --color-ink: #0B0F10;
-  --color-ink-secondary: #4C585C;
-  --color-ink-muted: #77858A;
-  --color-hairline: rgba(11, 15, 16, 0.10);
-  --color-gridline: #E3E7E8;
+  --color-ink: #0F172A;
+  --color-ink-secondary: #64748B;
+  --color-ink-muted: #94A3B8;
+  --color-hairline: #E2E8F0;
+  --color-gridline: #EEF0F4;
+
+  /* Primary interactive accent — buttons, focus rings, active nav. Distinct
+     from --color-source-logon, which is a data color (the "logon" source)
+     and must stay reserved for that. */
+  --color-accent: #4F46E5;
+  --color-accent-ink: #FFFFFF;
 
   /* Categorical — five log sources (light) */
   --color-source-file: #1baf7a;
@@ -49,25 +56,9 @@
   --color-status-suppressed: var(--color-ink-muted);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --color-page: #0E1315;
-    --color-surface: #151B1E;
-    --color-surface-raised: #1C2428;
-    --color-ink: #F2F5F6;
-    --color-ink-secondary: #A9B6BA;
-    --color-ink-muted: #6F7D82;
-    --color-hairline: rgba(242, 245, 246, 0.10);
-    --color-gridline: #232C30;
-
-    --color-source-file: #199e70;
-    --color-source-logon: #3987e5;
-    --color-source-email: #c98500;
-    --color-source-device: #9085e9;
-    --color-source-http: #d55181;
-  }
-}
-
+/* Dark stays available via the toggle (originally the default, still fully
+   validated per docs/06 section 4) — but light is now the app-wide default,
+   so it no longer auto-activates from OS preference alone. */
 :root[data-theme="dark"] {
   --color-page: #0E1315;
   --color-surface: #151B1E;
@@ -77,6 +68,9 @@
   --color-ink-muted: #6F7D82;
   --color-hairline: rgba(242, 245, 246, 0.10);
   --color-gridline: #232C30;
+
+  --color-accent: #818CF8;
+  --color-accent-ink: #0E1315;
 
   --color-source-file: #199e70;
   --color-source-logon: #3987e5;
@@ -98,6 +92,8 @@
   --color-ink-muted: var(--color-ink-muted);
   --color-hairline: var(--color-hairline);
   --color-gridline: var(--color-gridline);
+  --color-accent: var(--color-accent);
+  --color-accent-ink: var(--color-accent-ink);
 
   --color-source-file: var(--color-source-file);
   --color-source-logon: var(--color-source-logon);
@@ -132,6 +128,14 @@ body,
   height: 100%;
 }
 
+:root {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
 body {
   background-color: var(--color-page);
   color: var(--color-ink);
@@ -140,7 +144,7 @@ body {
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-source-logon);
+  outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
 

@@ -6,12 +6,15 @@ import { RiskTrendChart } from "@/components/shared/RiskTrendChart";
 import { WorkingWindowBar } from "@/components/shared/WorkingWindowBar";
 import { LaneChip } from "@/components/shared/LaneChip";
 import { ErrorState } from "@/components/shared/EmptyState";
+import { Breadcrumbs } from "@/components/shared/Breadcrumbs";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { emberForRisk, type TriageLane } from "@/lib/design";
 import { formatDate } from "@/lib/utils";
 
 export function UserPage() {
   const { userId } = useParams<{ userId: string }>();
   const { data: user, isError } = useUser(userId);
+  usePageTitle(user?.name ?? userId);
   const { data: risk } = useUserRisk(userId);
   const { data: incidents } = useIncidents({ user_id: userId, sort: "-risk", limit: 50 });
 
@@ -30,7 +33,8 @@ export function UserPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <div className="flex items-baseline gap-3">
+        <Breadcrumbs items={[{ label: "Users", to: "/users" }, { label: user.name ?? user.user_id! }]} />
+        <div className="mt-2 flex items-baseline gap-3">
           <h1 className="text-2xl font-semibold tracking-tight">{user.name}</h1>
           <span className="font-mono-tab text-sm text-(--color-ink-muted)">{user.user_id}</span>
         </div>

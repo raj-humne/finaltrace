@@ -17,21 +17,21 @@ export function CalibrationPlot({ bins, ece }: { bins: Bin[]; ece?: number }) {
       <div className="h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
-            <CartesianGrid stroke="var(--color-gridline)" />
-            <XAxis type="number" dataKey="x" domain={[0, 1]} tick={{ fontSize: 11, fill: "var(--color-ink-muted)" }} axisLine={{ stroke: "var(--color-gridline)" }} tickLine={false} name="Stated confidence" />
-            <YAxis type="number" dataKey="y" domain={[0, 1]} tick={{ fontSize: 11, fill: "var(--color-ink-muted)" }} axisLine={false} tickLine={false} name="Observed precision" width={32} />
+            <CartesianGrid stroke="#EEF0F4" />
+            <XAxis type="number" dataKey="x" domain={[0, 1]} tick={{ fontSize: 11, fill: "#94A3B8" }} axisLine={{ stroke: "#E5E7EB" }} tickLine={false} name="Stated confidence" />
+            <YAxis type="number" dataKey="y" domain={[0, 1]} tick={{ fontSize: 11, fill: "#94A3B8" }} axisLine={false} tickLine={false} name="Observed precision" width={32} />
             <ZAxis type="number" dataKey="n" range={[40, 300]} name="n" />
-            <ReferenceLine segment={[{ x: 0, y: 0 }, { x: 1, y: 1 }]} stroke="var(--color-ink-muted)" strokeDasharray="4 4" />
+            <ReferenceLine segment={[{ x: 0, y: 0 }, { x: 1, y: 1 }]} stroke="#CBD5E1" strokeDasharray="4 4" />
             <Tooltip
               cursor={{ strokeDasharray: "3 3" }}
-              contentStyle={{ background: "var(--color-surface-raised)", border: "1px solid var(--color-hairline)", fontSize: 12 }}
+              contentStyle={{ background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 8, fontSize: 12 }}
               formatter={(value, name) => [typeof value === "number" ? value.toFixed(2) : String(value), String(name)]}
             />
-            <Scatter data={points} fill="var(--color-ember-400)" />
+            <Scatter data={points} fill="#4F46E5" />
           </ScatterChart>
         </ResponsiveContainer>
       </div>
-      {ece != null && <p className="mt-1 text-xs text-(--color-ink-muted)">Expected calibration error (ECE): {ece.toFixed(3)}</p>}
+      {ece != null && <p className="mt-1 text-xs text-slate-500">Expected calibration error (ECE): {ece.toFixed(3)}</p>}
     </div>
   );
 }

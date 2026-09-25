@@ -1,11 +1,27 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { Users as UsersIcon, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { useUsers } from "@/hooks/useUsers";
 import { emberForRisk } from "@/lib/design";
 import { ErrorState } from "@/components/shared/EmptyState";
 import { TableRowSkeleton } from "@/components/shared/Skeleton";
+import { usePageTitle } from "@/hooks/usePageTitle";
+
+const TREND_ICON = { rising: TrendingUp, falling: TrendingDown } as const;
+
+function TrendBadge({ trend }: { trend?: string }) {
+  const Icon = TREND_ICON[trend as keyof typeof TREND_ICON] ?? Minus;
+  const color = trend === "rising" ? "text-rose-600" : trend === "falling" ? "text-emerald-600" : "text-(--color-ink-muted)";
+  return (
+    <span className={`inline-flex items-center gap-1 ${color}`}>
+      <Icon className="h-3.5 w-3.5" aria-hidden />
+      {trend ?? "stable"}
+    </span>
+  );
+}
 
 export function UsersPage() {
+  usePageTitle("Users");
   const [q, setQ] = useState("");
   const { data, isLoading, isError } = useUsers({ q: q || undefined, limit: 200 });
   // The live API always returns user_id order and ignores `sort` (Track B,
@@ -14,20 +30,27 @@ export function UsersPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Users</h1>
-        <p className="mt-1 text-sm text-(--color-ink-secondary)">{data?.total ?? "…"} monitored</p>
+      <div className="flex items-center gap-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-(--color-accent)/10">
+          <UsersIcon className="h-4.5 w-4.5 text-(--color-accent)" aria-hidden />
+        </span>
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Users</h1>
+          <p className="text-sm text-(--color-ink-secondary)">{data?.total ?? "…"} monitored</p>
+        </div>
       </div>
       <input
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder="Search by name or id…"
-        className="w-72 rounded-md border border-(--color-hairline) bg-(--color-surface) px-3 py-2 text-sm outline-none focus-visible:border-(--color-source-logon)"
+        aria-label="Search users by name or id"
+        spellCheck={false}
+        className="w-full rounded-md border border-(--color-hairline) bg-(--color-surface) px-3 py-2 text-sm outline-none focus-visible:border-(--color-accent) sm:w-72"
       />
       {isError && <ErrorState title="Could not load the user directory." />}
       {!isError && (
-        <div className="overflow-hidden rounded-lg border border-(--color-hairline) bg-(--color-surface-raised)">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto rounded-xl border border-(--color-hairline) bg-(--color-surface-raised)">
+          <table className="w-full min-w-[640px] text-sm">
             <thead className="border-b border-(--color-hairline) text-left text-xs text-(--color-ink-muted)">
               <tr>
                 <th className="px-4 py-2 font-medium">User</th>
@@ -54,7 +77,9 @@ export function UsersPage() {
                     <td className="px-4 py-2 font-mono-tab" style={{ color: emberForRisk(u.current_risk ?? 0) }}>
                       {(u.current_risk ?? 0).toFixed(1)}
                     </td>
-                    <td className="px-4 py-2 text-(--color-ink-secondary)">{u.trend}</td>
+                    <td className="px-4 py-2">
+                      <TrendBadge trend={u.trend} />
+                    </td>
                     <td className="px-4 py-2 font-mono-tab">{u.open_incidents}</td>
                   </tr>
                 ))}

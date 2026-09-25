@@ -1,9 +1,12 @@
-import { useRef, useState } from "react";
+import { useCallback, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { Inbox } from "lucide-react";
 import { useIncidents } from "@/hooks/useIncidents";
 import { IncidentRow } from "@/components/shared/IncidentRow";
 import { EmptyState, ErrorState } from "@/components/shared/EmptyState";
 import { IncidentRowSkeleton, Skeleton } from "@/components/shared/Skeleton";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { LANES, type TriageLane } from "@/lib/design";
 import { cn } from "@/lib/utils";
 
@@ -17,10 +20,29 @@ const STAGE_FILTERS = [
 ];
 
 export function QueuePage() {
-  const [lane, setLane] = useState<TriageLane | "ALL">("ALL");
-  const [stageMax, setStageMax] = useState<number | undefined>(undefined);
-  const [department, setDepartment] = useState<string>("");
-  const [sort, setSort] = useState("-risk");
+  usePageTitle("Triage queue");
+  // Filters live in the URL, not component state, so a filtered view
+  // survives a refresh and can be shared or bookmarked as-is.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const lane = (searchParams.get("lane") as TriageLane | null) ?? "ALL";
+  const stageMax = searchParams.get("stage_max") ? Number(searchParams.get("stage_max")) : undefined;
+  const department = searchParams.get("department") ?? "";
+  const sort = searchParams.get("sort") ?? "-risk";
+
+  const updateParam = useCallback(
+    (key: string, value: string | undefined) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (!value) next.delete(key);
+          else next.set(key, value);
+          return next;
+        },
+        { replace: true }
+      );
+    },
+    [setSearchParams]
+  );
 
   const { data, isLoading, isError } = useIncidents({
     lane: lane === "ALL" ? undefined : lane,
@@ -41,6 +63,10 @@ export function QueuePage() {
   const virtualizer = useVirtualizer({
     count: items.length,
     getScrollElement: () => parentRef.current,
+    // 92px fits the desktop single-row layout, but IncidentRow stacks into
+    // 3 lines on mobile — real height varies by viewport, so measure each
+    // row instead of trusting one fixed estimate (a fixed height here
+    // silently overlapped rows on narrow screens).
     estimateSize: () => 92,
     overscan: 10,
   });
@@ -49,21 +75,31 @@ export function QueuePage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Triage queue</h1>
-        <p className="mt-1 text-sm text-(--color-ink-secondary)">
-          {facets ? (
-            <>
-              {facets.lane?.AUTO_FLAG ?? 0} auto-flagged · {facets.lane?.ANALYST_REVIEW ?? 0} awaiting review · {facets.lane?.MONITOR ?? 0} monitored
-            </>
-          ) : (
-            <Skeleton className="h-4 w-72" />
-          )}
-        </p>
+      <div className="flex items-center gap-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-(--color-accent)/10">
+          <Inbox className="h-4.5 w-4.5 text-(--color-accent)" aria-hidden />
+        </span>
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Triage queue</h1>
+          <p className="text-sm text-(--color-ink-secondary)">
+            {facets ? (
+              <>
+                {facets.lane?.AUTO_FLAG ?? 0} auto-flagged · {facets.lane?.ANALYST_REVIEW ?? 0} awaiting review · {facets.lane?.MONITOR ?? 0} monitored
+              </>
+            ) : (
+              <Skeleton inline className="h-4 w-72" />
+            )}
+          </p>
+        </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-(--color-hairline) bg-(--color-surface) px-3 py-2">
-        <select value={lane} onChange={(e) => setLane(e.target.value as TriageLane | "ALL")} className="rounded-md border border-(--color-hairline) bg-(--color-surface-raised) px-2 py-1.5 text-sm">
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-(--color-hairline) bg-(--color-surface) px-3 py-2">
+        <select
+          aria-label="Filter by lane"
+          value={lane}
+          onChange={(e) => updateParam("lane", e.target.value === "ALL" ? undefined : e.target.value)}
+          className="rounded-md border border-(--color-hairline) bg-(--color-surface-raised) px-2 py-1.5 text-sm"
+        >
           {LANE_FILTERS.map((l) => (
             <option key={l} value={l}>
               {l === "ALL" ? "All lanes" : LANES[l].word}
@@ -71,8 +107,9 @@ export function QueuePage() {
           ))}
         </select>
         <select
+          aria-label="Filter by maximum kill-chain stage"
           value={stageMax ?? ""}
-          onChange={(e) => setStageMax(e.target.value ? Number(e.target.value) : undefined)}
+          onChange={(e) => updateParam("stage_max", e.target.value || undefined)}
           className="rounded-md border border-(--color-hairline) bg-(--color-surface-raised) px-2 py-1.5 text-sm"
         >
           {STAGE_FILTERS.map((s) => (
@@ -81,7 +118,12 @@ export function QueuePage() {
             </option>
           ))}
         </select>
-        <select value={department} onChange={(e) => setDepartment(e.target.value)} className="rounded-md border border-(--color-hairline) bg-(--color-surface-raised) px-2 py-1.5 text-sm">
+        <select
+          aria-label="Filter by department"
+          value={department}
+          onChange={(e) => updateParam("department", e.target.value || undefined)}
+          className="rounded-md border border-(--color-hairline) bg-(--color-surface-raised) px-2 py-1.5 text-sm"
+        >
           <option value="">All departments</option>
           {departments.map((d) => (
             <option key={d} value={d}>
@@ -90,15 +132,15 @@ export function QueuePage() {
           ))}
         </select>
         <div className="ml-auto flex items-center gap-2 text-sm text-(--color-ink-secondary)">
-          <span>Sort:</span>
-          <select value={sort} onChange={(e) => setSort(e.target.value)} className="rounded-md border border-(--color-hairline) bg-(--color-surface-raised) px-2 py-1.5">
+          <span id="queue-sort-label">Sort:</span>
+          <select aria-labelledby="queue-sort-label" value={sort} onChange={(e) => updateParam("sort", e.target.value === "-risk" ? undefined : e.target.value)} className="rounded-md border border-(--color-hairline) bg-(--color-surface-raised) px-2 py-1.5">
             <option value="-risk">Risk</option>
             <option value="-confidence">Confidence</option>
           </select>
         </div>
       </div>
 
-      <div className="rounded-lg border border-(--color-hairline) bg-(--color-surface-raised)">
+      <div className="rounded-xl border border-(--color-hairline) bg-(--color-surface-raised)">
         {isError && <ErrorState title="Could not load the triage queue." />}
         {!isError && isLoading && (
           <div>
@@ -116,7 +158,12 @@ export function QueuePage() {
               {virtualizer.getVirtualItems().map((virtualRow) => {
                 const item = items[virtualRow.index];
                 return (
-                  <div key={item.incident_id} style={{ position: "absolute", top: 0, left: 0, width: "100%", transform: `translateY(${virtualRow.start}px)` }}>
+                  <div
+                    key={item.incident_id}
+                    ref={virtualizer.measureElement}
+                    data-index={virtualRow.index}
+                    style={{ position: "absolute", top: 0, left: 0, width: "100%", transform: `translateY(${virtualRow.start}px)` }}
+                  >
                     <IncidentRow item={item} />
                   </div>
                 );

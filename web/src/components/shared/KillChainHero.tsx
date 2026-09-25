@@ -7,7 +7,7 @@ const STAGE_COPY: Record<(typeof STAGE_NAMES)[number], string> = {
   STAGING: "Removable media, first time in months",
   COLLECTION: "Forty-seven files, one session",
   EXFILTRATION: "One upload, off the network",
-  EVASION: "Nothing left to flag — alone",
+  EVASION: "Nothing left to flag, alone",
 };
 
 /**
@@ -31,10 +31,10 @@ export function KillChainHero() {
     }
   }, []);
 
-  const width = 380;
-  const height = 520;
-  const padY = 46;
-  const x = 46;
+  const width = 420;
+  const height = 480;
+  const padY = 40;
+  const x = 50;
   const step = (height - padY * 2) / (STAGE_NAMES.length - 1);
   const yFor = (i: number) => padY + step * i;
   const pathD = STAGE_NAMES.map((_, i) => `${i === 0 ? "M" : "L"} ${x} ${yFor(i)}`).join(" ");
@@ -50,7 +50,7 @@ export function KillChainHero() {
         viewBox={`0 0 ${width} ${height}`}
         width="100%"
         height="100%"
-        preserveAspectRatio="xMidYMid slice"
+        preserveAspectRatio="xMidYMid meet"
         role="img"
         aria-label="Kill-chain progression: context, recon, staging, collection, exfiltration, evasion"
         className="relative"

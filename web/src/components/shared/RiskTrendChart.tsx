@@ -26,7 +26,7 @@ export function RiskTrendChart({ points }: { points: Point[] }) {
           <Line dataKey="risk" stroke="var(--color-ember-500)" strokeWidth={2} dot={false} isAnimationActive={false} />
         </ComposedChart>
       </ResponsiveContainer>
-      <p className="mt-1 text-xs text-(--color-ink-muted)">Shaded band: cohort p50–p90 for the same dates.</p>
+      <p className="mt-1 text-xs text-(--color-ink-muted)">Shaded band: cohort p50-p90 for the same dates.</p>
     </div>
   );
 }

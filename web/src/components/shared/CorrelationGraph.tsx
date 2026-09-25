@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, useCallback } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useCallback } from "react";
 import ForceGraph2D, { type NodeObject, type LinkObject, type ForceGraphMethods } from "react-force-graph-2d";
 import { SOURCE_SHAPES, emberForRisk, type EventSource } from "@/lib/design";
 import { cn, parseApiTimestamp } from "@/lib/utils";
@@ -62,6 +62,23 @@ export function CorrelationGraph({ nodes, edges, selectedId, onSelect, overDense
   const [hoverId, setHoverId] = useState<string | null>(null);
   const fgRef = useRef<ForceGraphMethods<NodeDatum, LinkDatum> | undefined>(undefined);
 
+  // react-force-graph-2d's own auto-sizing occasionally falls back to
+  // window dimensions instead of the container's (observed: canvas sized to
+  // the full viewport inside an h-80 box). Measuring the container directly
+  // and passing explicit width/height sidesteps that entirely.
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      setSize({ width: Math.round(width), height: Math.round(height) });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const { graphData, tMin, tSpan } = useMemo(() => {
     const times = nodes.map((n) => (n.ts ? parseApiTimestamp(n.ts).getTime() : 0));
     const tMin = Math.min(...times);
@@ -85,24 +102,47 @@ export function CorrelationGraph({ nodes, edges, selectedId, onSelect, overDense
     return s;
   }, [activeId, edges]);
 
+  const pinTemporalPositions = useCallback(() => {
+    const w = size.width || 800;
+    const h = size.height || 320;
+    graphData.nodes.forEach((n) => {
+      const t = n.ts ? parseApiTimestamp(n.ts).getTime() : 0;
+      n.fx = 24 + ((t - tMin) / tSpan) * Math.max(1, w - 48);
+      n.fy = Math.min(h - 24, 32 + (n.stage ?? 0) * 22);
+    });
+  }, [graphData, tMin, tSpan, size.width, size.height]);
+
+  // Bootstrap fixed positions once per dataset so the graph opens in
+  // temporal mode without waiting on a user click or an engine-stop event
+  // (calling d3ReheatSimulation from onEngineStop would just re-trigger
+  // itself in a loop, since cooldownTicks is 0 in temporal mode). Fixed
+  // positions are plain pixel coordinates, but the camera doesn't know to
+  // frame them on its own — zoomToFit is required or the view stays at its
+  // default centered-on-origin state and every node renders off-screen.
+  useEffect(() => {
+    if (layout !== "temporal" || !size.width) return;
+    pinTemporalPositions();
+    const t = setTimeout(() => fgRef.current?.zoomToFit(0, 24), 0);
+    return () => clearTimeout(t);
+  }, [graphData, layout, pinTemporalPositions, size.width]);
+
   const applyLayout = useCallback(
     (mode: "temporal" | "force") => {
       setLayout(mode);
       const fg = fgRef.current;
       if (!fg) return;
-      graphData.nodes.forEach((n) => {
-        if (mode === "temporal") {
-          const t = n.ts ? parseApiTimestamp(n.ts).getTime() : 0;
-          n.fx = 40 + ((t - tMin) / tSpan) * 720;
-          n.fy = 40 + (n.stage ?? 0) * 22;
-        } else {
+      if (mode === "temporal") {
+        pinTemporalPositions();
+        setTimeout(() => fg.zoomToFit(300, 24), 0);
+      } else {
+        graphData.nodes.forEach((n) => {
           n.fx = undefined;
           n.fy = undefined;
-        }
-      });
-      fg.d3ReheatSimulation();
+        });
+        fg.d3ReheatSimulation();
+      }
     },
-    [graphData, tMin, tSpan]
+    [graphData, pinTemporalPositions]
   );
 
   return (
@@ -126,9 +166,12 @@ export function CorrelationGraph({ nodes, edges, selectedId, onSelect, overDense
           {nodes.length} nodes{overDense ? " · over-dense (correlation bonus suppressed)" : ""}
         </span>
       </div>
-      <div className="h-80 overflow-hidden rounded-md border border-(--color-hairline) bg-(--color-surface)">
-        <ForceGraph2D<NodeDatum, LinkDatum>
+      <div ref={containerRef} className="h-80 overflow-hidden rounded-md border border-(--color-hairline) bg-(--color-surface)">
+        {size.width > 0 && (
+          <ForceGraph2D<NodeDatum, LinkDatum>
           ref={fgRef}
+          width={size.width}
+          height={size.height}
           graphData={graphData}
           nodeId="id"
           cooldownTicks={layout === "temporal" ? 0 : 100}
@@ -143,9 +186,6 @@ export function CorrelationGraph({ nodes, edges, selectedId, onSelect, overDense
             onSelect(id === selectedId ? null : id);
           }}
           onNodeHover={(n: FGNode | null) => setHoverId(n?.id != null ? String(n.id) : null)}
-          onEngineStop={() => {
-            if (layout === "temporal") applyLayout("temporal");
-          }}
           nodeCanvasObject={(node: FGNode, ctx: CanvasRenderingContext2D) => {
             const r = node.has_signal ? 6 : 3.5;
             const shape = SOURCE_SHAPES[(node.source as EventSource) ?? "file"];
@@ -162,7 +202,8 @@ export function CorrelationGraph({ nodes, edges, selectedId, onSelect, overDense
             ctx.stroke();
             ctx.globalAlpha = 1;
           }}
-        />
+          />
+        )}
       </div>
       <p className="text-xs text-(--color-ink-muted)">shape = source · fill = risk contribution · dashed edge = shared PC/file</p>
     </div>

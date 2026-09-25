@@ -14,7 +14,7 @@ export function ConfidenceMeter({ value, compact = false }: { value: number; com
         aria-valuemax={1}
         aria-label="Confidence"
       >
-        <div className="h-full rounded-full bg-(--color-source-logon)" style={{ width: `${pct}%` }} />
+        <div className="h-full rounded-full bg-(--color-accent)" style={{ width: `${pct}%` }} />
         <div className="absolute top-1/2 h-2.5 w-0.5 -translate-y-1/2 bg-(--color-ink)" style={{ left: `${thresholdPct}%` }} aria-hidden />
       </div>
       <span className="font-mono-tab text-xs text-(--color-ink-secondary)">{value.toFixed(2)}</span>

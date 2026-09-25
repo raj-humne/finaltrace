@@ -1,0 +1,4 @@
+# SentinelTrace is an internal, authenticated security tool — nothing here
+# is meant to be crawled or indexed.
+User-agent: *
+Disallow: /

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const ROUTES = [
@@ -10,9 +10,15 @@ const ROUTES = [
 export function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
+  const returnFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    if (!open) setQuery("");
+    if (!open) {
+      setQuery("");
+      return;
+    }
+    returnFocusRef.current = document.activeElement as HTMLElement | null;
+    return () => returnFocusRef.current?.focus?.();
   }, [open]);
 
   useEffect(() => {
@@ -31,11 +37,15 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 pt-32" onClick={onClose}>
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Command palette"
         className="w-full max-w-md rounded-lg border border-(--color-hairline) bg-(--color-surface-raised) shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <input
           autoFocus
+          aria-label="Search commands"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Jump to…"

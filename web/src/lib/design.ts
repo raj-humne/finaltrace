@@ -46,3 +46,17 @@ export function emberForRisk(risk: number): string {
 export const STAGE_NAMES = ["CONTEXT", "RECON", "STAGING", "COLLECTION", "EXFILTRATION", "EVASION"] as const;
 
 export const STAGE_RAMP = { light: "#cde2fb", dark: "#184f95" };
+
+function hexToRgb(hex: string): [number, number, number] {
+  const n = parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+/** Interpolate along the stage ramp by position (0-5) — a signal's color then encodes *where in the chain it sits*, not decoration. */
+export function stageColor(stage: number): string {
+  const t = Math.max(0, Math.min(1, stage / (STAGE_NAMES.length - 1)));
+  const [r1, g1, b1] = hexToRgb(STAGE_RAMP.light);
+  const [r2, g2, b2] = hexToRgb(STAGE_RAMP.dark);
+  const mix = (a: number, b: number) => Math.round(a + (b - a) * t);
+  return `rgb(${mix(r1, r2)}, ${mix(g1, g2)}, ${mix(b1, b2)})`;
+}

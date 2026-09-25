@@ -16,7 +16,7 @@ interface ScoreMeterProps {
 export function ScoreMeter({ label, value, max = 100, threshold, thresholdLabel, format, tone = "ember", className }: ScoreMeterProps) {
   const pct = Math.max(0, Math.min(100, (value / max) * 100));
   const thresholdPct = threshold != null ? Math.max(0, Math.min(100, (threshold / max) * 100)) : null;
-  const fillColor = tone === "ember" ? emberForRisk((value / max) * 100) : "var(--color-source-logon)";
+  const fillColor = tone === "ember" ? emberForRisk((value / max) * 100) : "var(--color-accent)";
   const displayValue = format ? format(value) : formatRisk(value);
 
   return (

@@ -1,7 +1,8 @@
 import { cn } from "@/lib/utils";
 
-export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn("st-skeleton", className)} aria-hidden />;
+export function Skeleton({ className, inline = false }: { className?: string; inline?: boolean }) {
+  const Tag = inline ? "span" : "div";
+  return <Tag className={cn("st-skeleton inline-block", className)} aria-hidden />;
 }
 
 export function IncidentRowSkeleton() {

@@ -11,6 +11,8 @@ import { SignalCard } from "@/components/shared/SignalCard";
 import { VerdictForm } from "@/components/shared/VerdictForm";
 import { ErrorState } from "@/components/shared/EmptyState";
 import { Skeleton } from "@/components/shared/Skeleton";
+import { Breadcrumbs } from "@/components/shared/Breadcrumbs";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { formatDate, formatTime } from "@/lib/utils";
 
 export function IncidentPage() {
@@ -20,18 +22,38 @@ export function IncidentPage() {
   const { data: campaign } = useCampaign(incident?.campaign?.campaign_id);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const startedAt = useRef(Date.now()).current;
+  usePageTitle(incident?.narrative?.headline ?? incidentId);
 
   const activeStages = useMemo(
     () => [...new Set((incident?.signals ?? []).map((s) => s.stage).filter((s): s is number => s != null))].sort((a, b) => a - b),
     [incident]
   );
 
+  // The graph endpoint doesn't populate node.stage yet (Track A gap — see
+  // api/routers/incidents.py's GraphNodeOut, stage is always null). Signals
+  // carry the real kill-chain stage per rule, so back-fill node stage from
+  // whichever signal's evidence_event_ids covers that node.
+  const stageByEventId = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const s of incident?.signals ?? []) {
+      for (const eid of s.evidence_event_ids ?? []) {
+        if (s.stage != null) map.set(eid, s.stage);
+      }
+    }
+    return map;
+  }, [incident]);
+
+  const enrichedGraphNodes = useMemo(
+    () => (graph?.nodes ?? []).map((n) => ({ ...n, stage: n.id != null ? (stageByEventId.get(n.id) ?? n.stage) : n.stage })),
+    [graph, stageByEventId]
+  );
+
   const eventPins = useMemo(
     () =>
-      (graph?.nodes ?? [])
+      enrichedGraphNodes
         .filter((n) => n.has_signal)
         .map((n) => ({ ts: n.ts!, label: n.label ?? n.action ?? "", stage: n.stage ?? 0 })),
-    [graph]
+    [enrichedGraphNodes]
   );
 
   if (isLoading) {
@@ -74,14 +96,21 @@ export function IncidentPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <Link to="/incidents" className="text-sm text-(--color-ink-muted) hover:text-(--color-ink)">
-          &larr; Queue
-        </Link>
+        <Breadcrumbs items={[{ label: "Queue", to: "/incidents" }, { label: incident.incident_id! }]} />
         <div className="mt-2 flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">{incident.narrative?.headline}</h1>
             <p className="mt-1 text-sm text-(--color-ink-secondary)">
               {incident.signals?.length ?? 0} correlated signals across {new Set((incident.signals ?? []).map((s) => s.category)).size} categories
+              {incident.user?.user_id && (
+                <>
+                  {" "}
+                  &middot;{" "}
+                  <Link to={`/users/${incident.user.user_id}`} className="text-(--color-accent) hover:underline">
+                    View {incident.user.name ?? incident.user.user_id}&rsquo;s profile
+                  </Link>
+                </>
+              )}
             </p>
           </div>
           <span className="shrink-0 font-mono-tab text-xs text-(--color-ink-muted)">{incident.incident_id}</span>
@@ -119,7 +148,7 @@ export function IncidentPage() {
           <ChainSpine size="lg" activeStages={activeStages} events={eventPins} />
           {windowStart && windowEnd && (
             <p className="mt-2 text-xs text-(--color-ink-muted)">
-              {formatDate(windowStart)}, {formatTime(windowStart)}–{formatTime(windowEnd)} · {windowDurationMin?.toFixed(1)} min
+              {formatDate(windowStart)}, {formatTime(windowStart)}-{formatTime(windowEnd)} · {windowDurationMin?.toFixed(1)} min
             </p>
           )}
         </div>
@@ -150,12 +179,12 @@ export function IncidentPage() {
         {graph && (
           <div className="p-4">
             <h2 className="mb-2 text-sm font-medium text-(--color-ink-secondary)">Correlation graph</h2>
-            <CorrelationGraph nodes={graph.nodes ?? []} edges={graph.edges ?? []} selectedId={selectedId} onSelect={setSelectedId} overDense={graph.over_dense} />
+            <CorrelationGraph nodes={enrichedGraphNodes} edges={graph.edges ?? []} selectedId={selectedId} onSelect={setSelectedId} overDense={graph.over_dense} />
           </div>
         )}
 
         <div>
-          <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <h2 className="text-sm font-medium text-(--color-ink-secondary)">Evidence</h2>
             <span className="text-xs text-(--color-ink-muted)">{incident.attribution?.note}</span>
           </div>

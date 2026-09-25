@@ -18,15 +18,15 @@ export function IncidentRow({ item }: { item: IncidentListItem }) {
   return (
     <Link
       to={`/incidents/${item.incident_id}`}
-      className="grid grid-cols-[auto_auto_1fr] items-start gap-x-4 gap-y-1.5 border-b border-(--color-hairline) px-4 py-3 hover:bg-(--color-surface)"
+      className="flex flex-col gap-2 border-b border-(--color-hairline) px-4 py-3 hover:bg-(--color-surface) sm:grid sm:grid-cols-[auto_auto_1fr] sm:items-start sm:gap-x-4 sm:gap-y-1.5"
     >
-      <div className="flex w-28 flex-col gap-1.5">
+      <div className="flex items-center gap-3 sm:w-28 sm:flex-col sm:items-start sm:gap-1.5">
         <LaneChip lane={(item.triage_lane as TriageLane) ?? "MONITOR"} />
         <span className="font-mono-tab text-xl" style={{ color: emberForRisk(risk) }}>
           {risk.toFixed(0)}
         </span>
       </div>
-      <div className="w-32 pt-0.5">
+      <div className="w-32 sm:pt-0.5">
         <ConfidenceMeter value={item.confidence ?? 0} compact />
       </div>
       <div className="min-w-0">
@@ -34,10 +34,10 @@ export function IncidentRow({ item }: { item: IncidentListItem }) {
           <span className="truncate text-sm font-medium">
             {item.user_name} <span className="font-normal text-(--color-ink-muted)">· {item.department}</span>
           </span>
-          <ChainSpine size="sm" activeStages={item.killchain_stages ?? []} className="w-24 shrink-0" />
+          <ChainSpine size="sm" activeStages={item.killchain_stages ?? []} className="hidden w-24 shrink-0 sm:block" />
         </div>
         <p className="mt-0.5 truncate text-sm text-(--color-ink-secondary)">{item.headline}</p>
-        <div className="mt-1 flex items-center gap-3 text-xs text-(--color-ink-muted)">
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-(--color-ink-muted)">
           <span className="font-mono-tab">{item.window?.start ? formatDateTime(item.window.start) : ""}</span>
           <span>{contextLine(item)}</span>
         </div>

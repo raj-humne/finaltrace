@@ -47,13 +47,32 @@ export function ChainSpine({ size, activeStages, events = [], campaignPoints, on
 
   const isSm = size === "sm";
   const width = isSm ? 96 : 800;
-  const height = isSm ? 20 : 88;
   const padX = isSm ? 4 : 24;
-  const railY = isSm ? height / 2 : 40;
   const step = (width - padX * 2) / (STAGE_COUNT - 1);
   const stageX = (i: number) => padX + step * i;
   const dotR = isSm ? 3 : 6;
   const leadColor = maxActive >= 3 ? EMBER_STEPS[3] : STAGE_RAMP.dark;
+
+  // Events sharing a stage share an x position — stack them into separate
+  // rows instead of a fixed two-row alternation, which otherwise prints
+  // multiple labels on top of each other whenever a stage fires more than
+  // once (seen for real: 3+ signals landing on "staging" in one incident).
+  const pinRows = useMemo(() => {
+    if (isSm) return { rows: [], maxDepth: 0 };
+    const counts = new Map<number, number>();
+    const rows = events.map((ev) => {
+      const xKey = Math.max(0, Math.min(STAGE_COUNT - 1, ev.stage));
+      const row = counts.get(xKey) ?? 0;
+      counts.set(xKey, row + 1);
+      return { ev, x: stageX(xKey), row };
+    });
+    const maxDepth = counts.size ? Math.max(...counts.values()) : 0;
+    return { rows, maxDepth };
+  }, [events, isSm, stageX]);
+
+  const pinRowHeight = 28;
+  const height = isSm ? 20 : Math.max(88, 56 + pinRows.maxDepth * pinRowHeight);
+  const railY = isSm ? height / 2 : 40;
 
   return (
     <div className={className}>
@@ -84,7 +103,7 @@ export function ChainSpine({ size, activeStages, events = [], campaignPoints, on
               key={name}
               x={stageX(i)}
               y={14}
-              textAnchor="middle"
+              textAnchor={i === 0 ? "start" : i === STAGE_COUNT - 1 ? "end" : "middle"}
               fontSize="10.5"
               letterSpacing="0.04em"
               className="fill-(--color-ink-muted)"
@@ -131,16 +150,16 @@ export function ChainSpine({ size, activeStages, events = [], campaignPoints, on
         })}
 
         {!isSm &&
-          events.map((ev, i) => {
-            const x = stageX(Math.max(0, Math.min(STAGE_COUNT - 1, ev.stage)));
-            const pinY = railY + 14 + (i % 2) * 14;
+          pinRows.rows.map(({ ev, x, row }, i) => {
+            const pinY = railY + 20 + row * pinRowHeight;
+            const anchor = x <= padX + 4 ? "start" : x >= width - padX - 4 ? "end" : "middle";
             return (
               <g key={`${ev.ts}-${i}`}>
-                <line x1={x} y1={railY + dotR} x2={x} y2={pinY - 6} stroke="currentColor" strokeOpacity={0.35} strokeWidth={1} />
-                <text x={x} y={pinY} textAnchor="middle" fontSize="10" className="fill-(--color-ink-secondary)" style={{ fontFamily: "var(--font-mono)" }}>
+                <line x1={x} y1={railY + dotR} x2={x} y2={pinY - 16} stroke="currentColor" strokeOpacity={0.35} strokeWidth={1} />
+                <text x={x} y={pinY} textAnchor={anchor} fontSize="10" className="fill-(--color-ink-secondary)" style={{ fontFamily: "var(--font-mono)" }}>
                   {formatTime(ev.ts)}
                 </text>
-                <text x={x} y={pinY + 12} textAnchor="middle" fontSize="10" className="fill-(--color-ink)">
+                <text x={x} y={pinY + 13} textAnchor={anchor} fontSize="10" className="fill-(--color-ink)">
                   {ev.label}
                 </text>
               </g>

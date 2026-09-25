@@ -14,11 +14,11 @@ export function WorkingWindowBar({ startMin, endMin }: { startMin: number; endMi
       <div className="flex items-baseline justify-between text-sm">
         <span className="text-(--color-ink-secondary)">Working window, learned</span>
         <span className="font-mono-tab">
-          {fmtMinutes(startMin)} – {fmtMinutes(endMin)}
+          {fmtMinutes(startMin)} - {fmtMinutes(endMin)}
         </span>
       </div>
       <div className="relative h-2.5 rounded-full bg-(--color-gridline)">
-        <div className="absolute h-full rounded-full bg-(--color-source-logon)" style={{ left: `${leftPct}%`, width: `${widthPct}%` }} />
+        <div className="absolute h-full rounded-full bg-(--color-accent)" style={{ left: `${leftPct}%`, width: `${widthPct}%` }} />
       </div>
     </div>
   );

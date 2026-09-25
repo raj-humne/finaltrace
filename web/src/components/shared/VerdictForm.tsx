@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 const VERDICT_TINT: Record<string, string> = {
   confirmed_threat: "var(--color-status-auto-flag)",
-  benign: "var(--color-source-logon)",
+  benign: "var(--color-accent)",
   inconclusive: "var(--color-ink-muted)",
 };
 
@@ -64,6 +64,8 @@ export function VerdictForm({
     const tint = (verdict && VERDICT_TINT[verdict]) ?? "var(--color-ink-muted)";
     return (
       <div
+        role="status"
+        aria-live="polite"
         className="flex items-center gap-2.5 rounded-md py-1.5 pl-3 transition-colors duration-200"
         style={{
           borderLeft: `2px solid ${tint}`,
@@ -77,20 +79,22 @@ export function VerdictForm({
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-3">
-      <div className="flex flex-wrap gap-4">
+      <fieldset className="flex flex-wrap gap-4">
+        <legend className="sr-only">Verdict</legend>
         {VERDICTS.map((v) => (
           <label key={v.value} className="flex items-center gap-2 text-sm">
             <input type="radio" name="verdict" value={v.value} checked={verdict === v.value} onChange={() => setVerdict(v.value)} />
             {v.label}
           </label>
         ))}
-      </div>
+      </fieldset>
       <textarea
         value={note}
         onChange={(e) => setNote(e.target.value)}
         placeholder="note"
+        aria-label="Note"
         rows={2}
-        className="rounded-md border border-(--color-hairline) bg-(--color-surface) px-3 py-2 text-sm outline-none focus-visible:border-(--color-source-logon)"
+        className="rounded-md border border-(--color-hairline) bg-(--color-surface) px-3 py-2 text-sm outline-none focus-visible:border-(--color-accent)"
       />
       {verdict === "benign" && (
         <div className="flex flex-col gap-2 rounded-md border border-(--color-hairline) bg-(--color-surface) p-3">
@@ -104,21 +108,27 @@ export function VerdictForm({
                 value={ruleId}
                 onChange={(e) => setRuleId(e.target.value)}
                 placeholder="rule_id, e.g. stage.usb_after_dormancy"
+                aria-label="Rule ID to suppress"
+                spellCheck={false}
                 className="rounded-md border border-(--color-hairline) bg-(--color-surface-raised) px-2 py-1.5 text-sm"
               />
               <p className="text-xs text-(--color-ink-muted)">
-                Created with status "proposed" — a detection engineer must activate it. An analyst cannot silence a rule alone.
+                Created with status "proposed". A detection engineer must activate it. An analyst cannot silence a rule alone.
               </p>
             </>
           )}
         </div>
       )}
-      {mutation.isError && <p className="text-sm text-(--color-status-auto-flag)">Could not save the verdict. Try again.</p>}
+      {mutation.isError && (
+        <p role="alert" aria-live="polite" className="text-sm text-(--color-status-auto-flag)">
+          Could not save the verdict. Try again.
+        </p>
+      )}
       <div className="flex justify-end">
         <button
           type="submit"
           disabled={!verdict || mutation.isPending}
-          className={cn("rounded-md bg-(--color-ink) px-4 py-2 text-sm font-medium text-(--color-page)", (!verdict || mutation.isPending) && "opacity-50")}
+          className={cn("rounded-md bg-(--color-accent) px-4 py-2 text-sm font-medium text-(--color-accent-ink)", (!verdict || mutation.isPending) && "opacity-50")}
         >
           {mutation.isPending ? "Saving…" : "Save verdict"}
         </button>

@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { STAGE_RAMP } from "@/lib/design";
+import { STAGE_NAMES, stageColor } from "@/lib/design";
 import type { components } from "@/lib/api/types.gen";
 
 type Signal = components["schemas"]["SignalDetailOut"];
@@ -41,8 +41,13 @@ export function SignalCard({
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <span className="inline-flex items-center gap-1.5 text-xs text-(--color-ink-muted)">
-            <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: STAGE_RAMP.dark }} aria-hidden />
-            {signal.category}
+            <span
+              className="inline-block h-1.5 w-1.5 rounded-full"
+              style={{ backgroundColor: signal.stage != null ? stageColor(signal.stage) : undefined }}
+              aria-hidden
+            />
+            {signal.stage != null ? STAGE_NAMES[signal.stage] : null}
+            {signal.category && !STAGE_NAMES[signal.stage ?? -1]?.toLowerCase().startsWith(signal.category.toLowerCase()) ? ` · ${signal.category}` : null}
           </span>
           <p className="text-sm">{signal.phrase}</p>
           {(observed != null || threshold != null) && (

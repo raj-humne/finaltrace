@@ -1,14 +1,41 @@
 import { useMemo } from "react";
+import { Activity, Calendar, Download, Layers3, RefreshCw, ShieldAlert, ShieldCheck } from "lucide-react";
 import { useDetectionHealth, useRuleStatsFor, useRules } from "@/hooks/useDetection";
+import { useIncidents } from "@/hooks/useIncidents";
 import { CalibrationPlot } from "@/components/shared/CalibrationPlot";
+import { KpiCard } from "@/components/shared/KpiCard";
+import { RadialGaugeCard } from "@/components/shared/RadialGaugeCard";
+import { AlertVolumeChart, type AlertVolumePoint } from "@/components/shared/AlertVolumeChart";
 import { LANES, type TriageLane } from "@/lib/design";
-import { cn } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
+import { usePageTitle } from "@/hooks/usePageTitle";
+
+// Auto-flag precision target from docs/01-PRD.md section 7.1 ("Auto-flag
+// precision >= 0.75") — the gauge measures against a documented product
+// target, not an invented business goal.
+const AUTO_FLAG_PRECISION_TARGET = 75;
+
+function downloadCsv(filename: string, rows: Record<string, unknown>[]) {
+  if (rows.length === 0) return;
+  const headers = Object.keys(rows[0]);
+  const csv = [headers.join(","), ...rows.map((r) => headers.map((h) => JSON.stringify(r[h] ?? "")).join(","))].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 export function DetectionHealthPage() {
-  const { data: health } = useDetectionHealth();
-  const { data: rules } = useRules();
+  usePageTitle("Detection health");
+  const { data: health, refetch: refetchHealth, isFetching: fetchingHealth } = useDetectionHealth();
+  const { data: rules, refetch: refetchRules } = useRules();
   const ruleIds = useMemo(() => (rules ?? []).map((r) => r.id!).filter(Boolean), [rules]);
   const statsQueries = useRuleStatsFor(ruleIds);
+  const { data: openIncidents, refetch: refetchOpen } = useIncidents({ status: "open", limit: 1 });
+  const { data: allIncidents, refetch: refetchAll } = useIncidents({ limit: 500 });
 
   const rows = useMemo(() => {
     return ruleIds
@@ -22,103 +49,195 @@ export function DetectionHealthPage() {
       .sort((a, b) => Math.abs(b.weight_drift ?? 0) - Math.abs(a.weight_drift ?? 0));
   }, [ruleIds, statsQueries, rules]);
 
+  const rulesWithReviews = rows.filter((r) => r.reviewed > 0);
+  const weightedPrecision = useMemo(() => {
+    const totalDecided = rulesWithReviews.reduce((s, r) => s + r.confirmed + r.benign, 0);
+    if (totalDecided === 0) return null;
+    const totalConfirmed = rulesWithReviews.reduce((s, r) => s + r.confirmed, 0);
+    return (totalConfirmed / totalDecided) * 100;
+  }, [rulesWithReviews]);
+
+  const withinToleranceCount = rows.filter((r) => r.recommendation === "within_tolerance").length;
+  const scoredRuleCount = rows.filter((r) => r.recommendation !== "insufficient_data").length;
+
+  const { dailyPoints, firstHalfCount, secondHalfCount } = useMemo(() => {
+    const from = health?.window?.from;
+    const to = health?.window?.to;
+    if (!from || !to || !allIncidents?.items) return { dailyPoints: [] as AlertVolumePoint[], firstHalfCount: 0, secondHalfCount: 0 };
+    const start = new Date(`${from}T00:00:00Z`);
+    const end = new Date(`${to}T00:00:00Z`);
+    const dayMs = 86400000;
+    const days = Math.max(1, Math.round((end.getTime() - start.getTime()) / dayMs) + 1);
+    const counts = new Map<string, number>();
+    for (let i = 0; i < days; i++) {
+      const d = new Date(start.getTime() + i * dayMs).toISOString().slice(0, 10);
+      counts.set(d, 0);
+    }
+    for (const inc of allIncidents.items) {
+      const d = inc.window?.start?.slice(0, 10);
+      if (d && counts.has(d)) counts.set(d, (counts.get(d) ?? 0) + 1);
+    }
+    const points = [...counts.entries()].map(([date, count]) => ({ date, count }));
+    const mid = Math.floor(points.length / 2);
+    const firstHalf = points.slice(0, mid).reduce((s, p) => s + p.count, 0);
+    const secondHalf = points.slice(mid).reduce((s, p) => s + p.count, 0);
+    return { dailyPoints: points, firstHalfCount: firstHalf, secondHalfCount: secondHalf };
+  }, [health, allIncidents]);
+
+  const volumeChangePct = firstHalfCount > 0 ? ((secondHalfCount - firstHalfCount) / firstHalfCount) * 100 : null;
+
   const laneMix = health?.lane_mix ?? {};
   const laneTotal = Object.values(laneMix).reduce((s, n) => s + (n ?? 0), 0) || 1;
 
+  function onRefresh() {
+    refetchHealth();
+    refetchRules();
+    refetchOpen();
+    refetchAll();
+  }
+
+  function onExport() {
+    downloadCsv(
+      "sentineltrace-rules.csv",
+      rows.map((r) => ({
+        rule_id: r.id,
+        name: r.name,
+        fire_count: r.fire_count,
+        reviewed: r.reviewed,
+        observed_precision: r.observed_precision,
+        configured_weight: r.configured_weight,
+        measured_log_odds: r.measured_log_odds,
+        weight_drift: r.weight_drift,
+        recommendation: r.recommendation,
+      }))
+    );
+  }
+
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Detection health</h1>
-        <p className="mt-1 text-sm text-(--color-ink-secondary)">
-          {health?.window?.from} – {health?.window?.to}
-        </p>
+    <div className="rounded-2xl bg-[#F6F7FB] p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-xl font-semibold text-slate-900">Detection health</h1>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onRefresh}
+            aria-label="Refresh"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-slate-900"
+          >
+            <RefreshCw className={cn("h-4 w-4", fetchingHealth && "animate-spin")} aria-hidden />
+          </button>
+          <span className="flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-600">
+            <Calendar className="h-4 w-4 text-slate-400" aria-hidden />
+            {health?.window?.from && formatDate(health.window.from)} - {health?.window?.to && formatDate(health.window.to)}
+          </span>
+          <button
+            onClick={onExport}
+            className="flex h-9 items-center gap-2 rounded-lg bg-indigo-600 px-3.5 text-sm font-medium text-white hover:bg-indigo-500"
+          >
+            <Download className="h-4 w-4" aria-hidden />
+            Export
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <section className="rounded-lg border border-(--color-hairline) bg-(--color-surface-raised) p-4">
-          <h2 className="text-sm font-medium text-(--color-ink-secondary)">Alert volume</h2>
-          <p className="mt-2 font-mono-tab text-2xl">{health?.alert_volume?.per_1k_users_per_day?.toFixed(2)}</p>
-          <p className="text-xs text-(--color-ink-muted)">incidents / 1,000 users / day</p>
-          <p className="mt-2 text-xs text-(--color-ink-muted)">
-            {health?.compression?.signals_per_incident_mean?.toFixed(1)} signals and {health?.compression?.events_per_incident_mean?.toFixed(0)} events per incident on average
-          </p>
-        </section>
-
-        <section className="rounded-lg border border-(--color-hairline) bg-(--color-surface-raised) p-4 md:col-span-2">
-          <h2 className="mb-2 text-sm font-medium text-(--color-ink-secondary)">Lane mix</h2>
-          <div className="flex h-4 overflow-hidden rounded-full">
-            {(Object.keys(LANES) as TriageLane[]).map((lane) => {
-              const count = laneMix[lane] ?? 0;
-              const pct = (count / laneTotal) * 100;
-              if (pct === 0) return null;
-              return <div key={lane} title={`${LANES[lane].word}: ${count}`} style={{ width: `${pct}%`, backgroundColor: LANES[lane].hex }} className="mr-0.5 last:mr-0" />;
-            })}
-          </div>
-          <div className="mt-2 flex flex-wrap gap-4 text-xs text-(--color-ink-secondary)">
-            {(Object.keys(LANES) as TriageLane[]).map((lane) => (
-              <span key={lane} className="flex items-center gap-1.5">
-                <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: LANES[lane].hex }} />
-                {LANES[lane].word} {laneMix[lane] ?? 0}
-              </span>
-            ))}
-          </div>
-        </section>
+      <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiCard icon={ShieldAlert} label="Open incidents" value={String(openIncidents?.total ?? 0)} />
+        <KpiCard icon={ShieldCheck} label="Auto-flag precision" value={weightedPrecision != null ? `${weightedPrecision.toFixed(0)}%` : "n/a"} />
+        <KpiCard icon={Layers3} label="Signals / incident" value={health?.compression?.signals_per_incident_mean?.toFixed(1) ?? "n/a"} />
+        <KpiCard icon={Activity} label="Calibration error" value={health?.calibration?.ece?.toFixed(3) ?? "n/a"} />
       </div>
 
-      <section className="rounded-lg border border-(--color-hairline) bg-(--color-surface-raised) p-4">
-        <h2 className="mb-2 text-sm font-medium text-(--color-ink-secondary)">Calibration</h2>
-        <p className="mb-2 text-xs text-(--color-ink-muted)">Stated confidence against observed precision, with the diagonal drawn.</p>
+      <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[1.6fr_1fr]">
+        <AlertVolumeChart points={dailyPoints} total={allIncidents?.total ?? 0} changePct={volumeChangePct} />
+        <RadialGaugeCard
+          title="Auto-flag precision"
+          subtitle="Against the documented product target"
+          value={weightedPrecision ?? 0}
+          target={AUTO_FLAG_PRECISION_TARGET}
+          valueLabel={weightedPrecision != null ? `${weightedPrecision.toFixed(0)}%` : "n/a"}
+          captionLabel={`of ${AUTO_FLAG_PRECISION_TARGET}% target`}
+          breakdown={[
+            { label: "Rules reviewed", value: `${rulesWithReviews.length} / ${rows.length}`, pct: rows.length ? (rulesWithReviews.length / rows.length) * 100 : 0 },
+            { label: "Within tolerance", value: `${withinToleranceCount} / ${scoredRuleCount}`, pct: scoredRuleCount ? (withinToleranceCount / scoredRuleCount) * 100 : 0 },
+          ]}
+        />
+      </div>
+
+      <div className="mt-4 rounded-xl border border-slate-200 bg-white p-5">
+        <h2 className="text-sm font-semibold text-slate-900">Lane mix</h2>
+        <div className="mt-3 flex h-3 overflow-hidden rounded-full bg-slate-100">
+          {(Object.keys(LANES) as TriageLane[]).map((lane) => {
+            const count = laneMix[lane] ?? 0;
+            const pct = (count / laneTotal) * 100;
+            if (pct === 0) return null;
+            return <div key={lane} title={`${LANES[lane].word}: ${count}`} style={{ width: `${pct}%`, backgroundColor: LANES[lane].hex }} className="mr-0.5 last:mr-0" />;
+          })}
+        </div>
+        <div className="mt-3 flex flex-wrap gap-4 text-xs text-slate-500">
+          {(Object.keys(LANES) as TriageLane[]).map((lane) => (
+            <span key={lane} className="flex items-center gap-1.5">
+              <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: LANES[lane].hex }} />
+              {LANES[lane].word} {laneMix[lane] ?? 0}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-xl border border-slate-200 bg-white p-5">
+        <h2 className="text-sm font-semibold text-slate-900">Calibration</h2>
+        <p className="mb-2 text-xs text-slate-500">Stated confidence against observed precision, with the diagonal drawn.</p>
         {health?.calibration && <CalibrationPlot bins={health.calibration.bins ?? []} ece={health.calibration.ece} />}
-      </section>
+      </div>
 
       {health?.warnings && health.warnings.length > 0 && (
-        <div className="rounded-lg border border-(--color-status-monitor)/40 bg-(--color-surface-raised) p-4 text-sm text-(--color-ink-secondary)">
+        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
           {health.warnings.map((w) => (
             <p key={w}>{w}</p>
           ))}
         </div>
       )}
 
-      <section className="overflow-hidden rounded-lg border border-(--color-hairline) bg-(--color-surface-raised)">
-        <h2 className="border-b border-(--color-hairline) px-4 py-3 text-sm font-medium text-(--color-ink-secondary)">Rules, sorted by weight drift</h2>
+      <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <h2 className="border-b border-slate-100 px-5 py-3 text-sm font-semibold text-slate-900">Rules, sorted by weight drift</h2>
         <table className="w-full text-sm">
-          <thead className="border-b border-(--color-hairline) text-left text-xs text-(--color-ink-muted)">
+          <thead className="border-b border-slate-100 text-left text-xs text-slate-400">
             <tr>
-              <th className="px-4 py-2 font-medium">Rule</th>
-              <th className="px-4 py-2 font-medium">Fires</th>
-              <th className="px-4 py-2 font-medium">Reviewed</th>
-              <th className="px-4 py-2 font-medium">Observed precision</th>
-              <th className="px-4 py-2 font-medium">Configured weight</th>
-              <th className="px-4 py-2 font-medium">Measured log-odds</th>
-              <th className="px-4 py-2 font-medium">Drift</th>
+              <th className="px-5 py-2 font-medium">Rule</th>
+              <th className="px-5 py-2 font-medium">Fires</th>
+              <th className="px-5 py-2 font-medium">Reviewed</th>
+              <th className="px-5 py-2 font-medium">Observed precision</th>
+              <th className="px-5 py-2 font-medium">Configured weight</th>
+              <th className="px-5 py-2 font-medium">Measured log-odds</th>
+              <th className="px-5 py-2 font-medium">Drift</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.id} className="border-b border-(--color-hairline) last:border-b-0">
-                <td className="px-4 py-2">
-                  <span className="font-medium">{r.name}</span>
-                  <span className="ml-2 font-mono-tab text-xs text-(--color-ink-muted)">{r.id}</span>
+              <tr key={r.id} className="border-b border-slate-100 last:border-b-0">
+                <td className="px-5 py-2.5">
+                  <span className="font-medium text-slate-900">{r.name}</span>
+                  <span className="ml-2 font-mono-tab text-xs text-slate-400">{r.id}</span>
                 </td>
-                <td className="px-4 py-2 font-mono-tab">{r.fire_count}</td>
-                <td className="px-4 py-2 font-mono-tab">{r.reviewed}</td>
-                <td className="px-4 py-2 font-mono-tab">{r.observed_precision?.toFixed(2)}</td>
-                <td className="px-4 py-2 font-mono-tab">{r.configured_weight?.toFixed(2)}</td>
-                <td className="px-4 py-2 font-mono-tab">{r.measured_log_odds?.toFixed(2)}</td>
+                <td className="px-5 py-2.5 font-mono-tab text-slate-700">{r.fire_count}</td>
+                <td className="px-5 py-2.5 font-mono-tab text-slate-700">{r.reviewed}</td>
+                <td className="px-5 py-2.5 font-mono-tab text-slate-700">{r.observed_precision?.toFixed(2)}</td>
+                <td className="px-5 py-2.5 font-mono-tab text-slate-700">{r.configured_weight?.toFixed(2)}</td>
+                <td className="px-5 py-2.5 font-mono-tab text-slate-700">{r.measured_log_odds?.toFixed(2)}</td>
                 <td
                   className={cn(
-                    "px-4 py-2 font-mono-tab",
-                    r.recommendation !== "within_tolerance" && "text-(--color-status-review)"
+                    "px-5 py-2.5 font-mono-tab",
+                    r.recommendation === "review_weight" && "text-rose-600",
+                    r.recommendation === "insufficient_data" && "text-slate-400",
+                    r.recommendation === "within_tolerance" && "text-slate-700"
                   )}
                 >
-                  {r.recommendation !== "within_tolerance" && "⚠ "}
-                  {r.weight_drift?.toFixed(2)}
+                  {r.recommendation === "review_weight" && "⚠ "}
+                  {r.weight_drift != null ? r.weight_drift.toFixed(2) : "insufficient data"}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
-      </section>
+      </div>
     </div>
   );
 }

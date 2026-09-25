@@ -11,3 +11,6 @@ data/synthetic/
 *.db-shm
 *.db-wal
 *.db-journal
+
+# Claude Code local session/tool state — not project content
+.claude/
