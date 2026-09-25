@@ -1,0 +1,21 @@
+# Correlation graph parameters. See docs/04-DETECTION-ENGINE.md section 6.
+default_window_min: 60
+
+pair_windows:
+  logon__device: 90
+  device__file: 60
+  file__http: 120
+  file__email: 120
+  http__http: 30
+  logon__file: 180
+  logon__http: 180
+  device__http: 120
+
+context_neighbour_min: 15
+min_events_per_incident: 2
+max_component_events: 400
+
+campaign:
+  span_days: 14
+  require_stage_advance: true
+  per_incident_logit_bonus: 0.25

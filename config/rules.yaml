@@ -1,0 +1,356 @@
+# SentinelTrace rule catalogue. See docs/04-DETECTION-ENGINE.md section 3.
+#
+# Weights are LOG-ODDS EVIDENCE POINTS: weight w means observing this signal
+# multiplies the odds of "malicious user-day" by e^w. They are falsifiable and
+# the eval harness measures drift between configured and observed log-odds.
+#
+# Stages: 0 CONTEXT, 1 RECON, 2 STAGING, 3 COLLECTION, 4 EXFILTRATION, 5 EVASION
+
+rules:
+
+# --------------------------------------------------------------- CONTEXT (0)
+- id: ctx.departure_imminent
+  name: Departure within 30 days
+  category: context
+  stage: 0
+  weight: 0.55
+  when:
+    - {feature: days_to_departure, op: lte, value: 30}
+    - {feature: days_to_departure, op: gte, value: 0}
+  strength: {feature: days_to_departure, scale: inverse_linear, lo: 0, hi: 30}
+  requires_baseline: false
+  evidence: {sources: [], window_min: 1440}
+  phrase: "is recorded as departing in {days_to_departure:.0f} days"
+
+- id: ctx.post_departure_activity
+  name: Activity after recorded departure
+  category: context
+  stage: 0
+  weight: 2.20
+  when:
+    - {feature: days_to_departure, op: lt, value: 0}
+  strength: {scale: binary}
+  requires_baseline: false
+  evidence: {sources: [logon], window_min: 1440}
+  phrase: "was active after their recorded departure date"
+
+- id: ctx.job_search_spike
+  name: Job-search browsing spike
+  category: context
+  stage: 0
+  weight: 0.70
+  when:
+    - {feature: job_search_visits, op: gte, value: 5}
+    - {feature: job_search_visits, op: z_peer_gte, value: 3.0}
+  strength: {feature: job_search_visits, scale: log, lo: 5, hi: 60}
+  requires_baseline: true
+  evidence: {sources: [http], window_min: 240}
+  phrase: "visited job-search sites {job_search_visits:.0f} times"
+
+- id: ctx.job_search_sustained
+  name: Sustained job-search activity
+  category: context
+  stage: 0
+  weight: 0.85
+  when:
+    - {feature: job_search_days_trailing14, op: gte, value: 5}
+  strength: {feature: job_search_days_trailing14, scale: linear, lo: 5, hi: 14}
+  requires_baseline: false
+  evidence: {sources: [http], window_min: 240}
+  phrase: "browsed job-search sites on {job_search_days_trailing14:.0f} of the last 14 days"
+
+# ------------------------------------------------------------- ACCESS/RECON (1)
+- id: access.new_pc
+  name: Access to a previously unused workstation
+  category: access
+  stage: 1
+  weight: 0.60
+  when:
+    - {feature: new_pc_count, op: gte, value: 1}
+  strength: {feature: new_pc_count, scale: log, lo: 1, hi: 8}
+  requires_baseline: true
+  evidence: {sources: [logon], window_min: 180}
+  phrase: "used {new_pc_count:.0f} workstation(s) never seen before for this user"
+
+- id: access.pc_breadth
+  name: Unusual number of distinct workstations
+  category: access
+  stage: 1
+  weight: 0.75
+  when:
+    - {feature: distinct_pc_count, op: z_self_gte, value: 3.0}
+    - {feature: distinct_pc_count, op: gte, value: 3}
+  strength: {feature: distinct_pc_count, scale: log, lo: 3, hi: 15}
+  requires_baseline: true
+  evidence: {sources: [logon], window_min: 180}
+  phrase: "accessed {distinct_pc_count:.0f} distinct workstations"
+
+- id: access.file_breadth
+  name: Unusual breadth of file access
+  category: access
+  stage: 1
+  weight: 0.80
+  when:
+    - {feature: distinct_file_count, op: z_self_gte, value: 3.5}
+    - {feature: distinct_file_count, op: z_peer_gte, value: 2.0}
+  strength: {feature: distinct_file_count, scale: log, lo: 20, hi: 400}
+  requires_baseline: true
+  evidence: {sources: [file], window_min: 120}
+  phrase: "touched {distinct_file_count:.0f} distinct files"
+
+- id: access.new_extension
+  name: File types not previously accessed
+  category: access
+  stage: 1
+  weight: 0.45
+  when:
+    - {feature: new_extension_count, op: gte, value: 3}
+  strength: {feature: new_extension_count, scale: linear, lo: 3, hi: 10}
+  requires_baseline: true
+  evidence: {sources: [file], window_min: 120}
+  phrase: "opened {new_extension_count:.0f} file types never used before"
+
+# ---------------------------------------------------------------- STAGING (2)
+- id: stage.first_ever_usb
+  name: First recorded removable-media use
+  category: staging
+  stage: 2
+  weight: 1.60
+  when:
+    - {feature: is_first_ever_usb, op: is_true}
+  strength: {scale: binary}
+  requires_baseline: false
+  evidence: {sources: [device], window_min: 120}
+  phrase: "connected removable media for the first time on record"
+
+- id: stage.usb_after_dormancy
+  name: Removable media after long dormancy
+  category: staging
+  stage: 2
+  weight: 1.10
+  when:
+    - {feature: days_since_last_usb, op: gte, value: 90}
+  strength: {feature: days_since_last_usb, scale: log, lo: 90, hi: 400}
+  requires_baseline: false
+  evidence: {sources: [device], window_min: 120}
+  phrase: "connected removable media for the first time in {days_since_last_usb:.0f} days"
+
+- id: stage.usb_on_foreign_pc
+  name: Removable media on another user's workstation
+  category: staging
+  stage: 2
+  weight: 1.35
+  when:
+    - {feature: usb_on_foreign_pc, op: is_true}
+  strength: {scale: binary}
+  requires_baseline: false
+  evidence: {sources: [device, logon], window_min: 120}
+  phrase: "used removable media on a workstation that is not their own"
+
+- id: stage.hacking_tool_download
+  name: Visit to a hacking-tool distribution site
+  category: staging
+  stage: 2
+  weight: 1.75
+  when:
+    - {feature: hacking_tool_visits, op: gte, value: 1}
+  strength: {feature: hacking_tool_visits, scale: log, lo: 1, hi: 10}
+  requires_baseline: false
+  evidence: {sources: [http], window_min: 120}
+  phrase: "visited hacking-tool sites {hacking_tool_visits:.0f} time(s)"
+
+- id: stage.offhours_logon
+  name: Logon outside the learned working window
+  category: staging
+  stage: 2
+  weight: 0.65
+  when:
+    - {feature: after_hours_logon_count, op: gte, value: 1}
+  strength: {feature: after_hours_logon_count, scale: log, lo: 1, hi: 6}
+  requires_baseline: true
+  evidence: {sources: [logon], window_min: 120}
+  phrase: "logged on outside their normal working window"
+
+- id: stage.offhours_logon_foreign_pc
+  name: Off-hours logon on an unfamiliar workstation
+  category: staging
+  stage: 2
+  weight: 1.20
+  when:
+    - {feature: after_hours_logon_count, op: gte, value: 1}
+    - {feature: own_pc_ratio, op: lt, value: 1.0}
+  strength: {scale: binary}
+  requires_baseline: true
+  evidence: {sources: [logon], window_min: 120}
+  phrase: "logged on off-hours from a workstation they rarely use"
+
+# ------------------------------------------------------------- COLLECTION (3)
+- id: collect.file_burst
+  name: Rapid burst of file activity
+  category: collection
+  stage: 3
+  weight: 0.95
+  when:
+    - {feature: file_burst_max_per_10min, op: gte, value: 25}
+  strength: {feature: file_burst_max_per_10min, scale: log, lo: 25, hi: 300}
+  requires_baseline: false
+  evidence: {sources: [file], window_min: 30}
+  phrase: "opened {file_burst_max_per_10min:.0f} files within a ten-minute window"
+
+- id: collect.sensitive_concentration
+  name: Concentration on sensitive file types
+  category: collection
+  stage: 3
+  weight: 0.85
+  when:
+    - {feature: sensitive_ext_count, op: z_self_gte, value: 3.0}
+    - {feature: sensitive_ext_ratio, op: gte, value: 0.6}
+    - {feature: sensitive_ext_count, op: gte, value: 10}
+  strength: {feature: sensitive_ext_count, scale: log, lo: 10, hi: 200}
+  requires_baseline: true
+  evidence: {sources: [file], window_min: 120}
+  phrase: "concentrated on sensitive document types ({sensitive_ext_count:.0f} files)"
+
+- id: collect.volume_anomaly
+  name: File volume far above personal norm
+  category: collection
+  stage: 3
+  weight: 0.80
+  when:
+    - {feature: file_event_count, op: z_self_gte, value: 4.0}
+    - {feature: file_event_count, op: gte, value: 20}
+  strength: {feature: file_event_count, scale: log, lo: 20, hi: 400}
+  requires_baseline: true
+  evidence: {sources: [file], window_min: 120}
+  phrase: "generated {file_event_count:.0f} file events, well above their norm"
+
+- id: collect.offhours_file_access
+  name: File activity concentrated outside working hours
+  category: collection
+  stage: 3
+  weight: 0.90
+  when:
+    - {feature: offhours_event_ratio, op: gte, value: 0.5}
+    - {feature: file_event_count, op: gte, value: 20}
+  strength: {feature: offhours_event_ratio, scale: linear, lo: 0.5, hi: 1.0}
+  requires_baseline: true
+  evidence: {sources: [file], window_min: 120}
+  phrase: "did {offhours_pct:.0f}% of their work outside normal hours"
+
+# ---------------------------------------------------------- EXFILTRATION (4)
+- id: exfil.file_copy_to_usb
+  name: Bulk file activity during a removable-media session
+  category: exfil
+  stage: 4
+  weight: 1.30
+  when:
+    - {feature: file_events_during_usb, op: gte, value: 10}
+  strength: {feature: file_events_during_usb, scale: log, lo: 10, hi: 200}
+  requires_baseline: false
+  evidence: {sources: [file, device], window_min: 60}
+  phrase: "copied {file_events_during_usb:.0f} files while removable media was connected"
+  references: ["MITRE T1052.001"]
+
+- id: exfil.leak_platform_visit
+  name: Visit to a leak or paste platform
+  category: exfil
+  stage: 4
+  weight: 2.40
+  when:
+    - {feature: leak_platform_visits, op: gte, value: 1}
+  strength: {feature: leak_platform_visits, scale: log, lo: 1, hi: 10}
+  requires_baseline: false
+  evidence: {sources: [http], window_min: 60}
+  phrase: "visited a leak platform {leak_platform_visits:.0f} time(s)"
+  references: ["MITRE T1567"]
+
+- id: exfil.cloud_upload_burst
+  name: Upload activity to personal cloud storage
+  category: exfil
+  stage: 4
+  weight: 1.25
+  when:
+    - {feature: cloud_storage_visits, op: gte, value: 3}
+    - {feature: upload_shaped_count, op: gte, value: 3}
+  strength: {feature: upload_shaped_count, scale: log, lo: 3, hi: 40}
+  requires_baseline: false
+  evidence: {sources: [http], window_min: 120}
+  phrase: "made {upload_shaped_count:.0f} upload requests to personal cloud storage"
+  references: ["MITRE T1567.002"]
+
+- id: exfil.self_send_attachments
+  name: Attachments sent to a personal address
+  category: exfil
+  stage: 4
+  weight: 1.15
+  when:
+    - {feature: self_send_count, op: gte, value: 1}
+    - {feature: attachment_count, op: gte, value: 1}
+  strength: {feature: self_send_count, scale: log, lo: 1, hi: 10}
+  requires_baseline: false
+  evidence: {sources: [email], window_min: 120}
+  phrase: "emailed {attachment_count:.0f} attachment(s) to a personal address"
+  references: ["MITRE T1048.003"]
+
+- id: exfil.external_attachment_volume
+  name: Attachment volume to external recipients
+  category: exfil
+  stage: 4
+  weight: 1.05
+  when:
+    - {feature: attachment_bytes_external, op: z_self_gte, value: 3.5}
+    - {feature: attachment_bytes_external, op: gte, value: 1000000}
+  strength: {feature: attachment_bytes_external, scale: log, lo: 1000000, hi: 100000000}
+  requires_baseline: true
+  evidence: {sources: [email], window_min: 120}
+  phrase: "sent {attachment_mb_external:.1f} MB of attachments outside the organisation"
+
+- id: exfil.mass_email
+  name: Mass email to an unusual number of recipients
+  category: exfil
+  stage: 4
+  weight: 1.40
+  when:
+    - {feature: mass_email_flag, op: is_true}
+  strength: {feature: max_recipients_single_email, scale: log, lo: 20, hi: 500}
+  requires_baseline: true
+  evidence: {sources: [email], window_min: 60}
+  phrase: "sent a single email to {max_recipients_single_email:.0f} recipients"
+
+- id: exfil.bcc_external
+  name: Blind-copied external recipients
+  category: exfil
+  stage: 4
+  weight: 0.70
+  when:
+    - {feature: bcc_external_count, op: gte, value: 1}
+  strength: {feature: bcc_external_count, scale: log, lo: 1, hi: 20}
+  requires_baseline: false
+  evidence: {sources: [email], window_min: 120}
+  phrase: "blind-copied {bcc_external_count:.0f} external recipient(s)"
+
+# ------------------------------------------------------------------ EVASION (5)
+- id: evade.activity_after_logoff
+  name: Activity recorded with no open session
+  category: evasion
+  stage: 5
+  weight: 1.30
+  when:
+    - {feature: events_outside_session, op: gte, value: 3}
+  strength: {feature: events_outside_session, scale: log, lo: 3, hi: 50}
+  requires_baseline: false
+  evidence: {sources: [file, http], window_min: 120}
+  phrase: "generated {events_outside_session:.0f} events with no active logon session"
+
+- id: evade.offhours_only_day
+  name: Entire day of activity outside working hours
+  category: evasion
+  stage: 5
+  weight: 0.95
+  when:
+    - {feature: offhours_event_ratio, op: gte, value: 0.99}
+    - {feature: total_event_count, op: gte, value: 15}
+  strength: {scale: binary}
+  requires_baseline: true
+  evidence: {sources: [], window_min: 1440}
+  phrase: "worked entirely outside their normal hours"

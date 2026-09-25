@@ -1,0 +1,25 @@
+# Risk x confidence lane matrix. See docs/04-DETECTION-ENGINE.md section 4.4.
+alert_threshold: 40.0
+
+risk_bands:
+  low: 40.0      # below this -> low
+  high: 70.0     # at or above this -> high
+
+confidence_bands:
+  low: 0.40
+  high: 0.65
+
+# [risk_band][confidence_band] -> lane
+matrix:
+  low:
+    low: SUPPRESSED
+    mid: MONITOR
+    high: MONITOR
+  mid:
+    low: MONITOR
+    mid: ANALYST_REVIEW
+    high: ANALYST_REVIEW
+  high:
+    low: ANALYST_REVIEW      # FR-6.2: high risk + low confidence NEVER auto-flags
+    mid: ANALYST_REVIEW
+    high: AUTO_FLAG

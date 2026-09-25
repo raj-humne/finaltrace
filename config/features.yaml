@@ -1,0 +1,43 @@
+# Feature extraction and baseline parameters. See docs/03-DATA-MODEL.md section 4.
+baseline:
+  self_window_days: 30
+  min_warmup_days: 14
+  maturity_full_days: 30
+  mad_scale: 1.4826
+  epsilon: 0.5
+  peer_min_cohort: 5
+
+working_window:
+  # Off-hours is learned per user, not hard-coded.
+  low_percentile: 5
+  high_percentile: 95
+  lookback_days: 30
+  default_start_min: 480   # 08:00 fallback before warm-up
+  default_end_min: 1080    # 18:00 fallback
+
+sensitive_extensions: [doc, docx, xls, xlsx, pdf, csv, zip, ppt, pptx, txt]
+
+sources: [logon, device, file, http, email]
+
+baselined_features:
+  - offhours_event_count
+  - offhours_event_ratio
+  - logon_count
+  - distinct_pc_count
+  - device_connect_count
+  - usb_session_total_min
+  - file_event_count
+  - distinct_file_count
+  - distinct_extension_count
+  - sensitive_ext_count
+  - file_events_during_usb
+  - file_burst_max_per_10min
+  - http_event_count
+  - distinct_domain_count
+  - job_search_visits
+  - cloud_storage_visits
+  - upload_shaped_count
+  - email_sent_count
+  - external_recipient_count
+  - attachment_bytes_external
+  - max_recipients_single_email

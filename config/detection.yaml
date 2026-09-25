@@ -1,0 +1,38 @@
+# Scoring model parameters. See docs/04-DETECTION-ENGINE.md section 4.
+scoring:
+  prior_logit: -4.6        # L0 - encodes ~1% prior odds
+  tau: 1.8                 # logistic temperature
+  category_decay: 0.5      # delta - geometric decay within a category
+  ml_weight: 1.20          # hard cap on the anomaly model's contribution
+  ml_percentile_floor: 0.95
+
+correlation_bonus:
+  diversity_weight: 0.35   # per extra distinct category
+  chain_weight: 0.30       # per monotonic stage advance
+  proximity_weight: 0.45
+  proximity_full_min: 30   # median gap at or below this -> full bonus
+  proximity_zero_min: 720  # median gap at or above this -> no bonus
+
+confidence:
+  agreement_weight: 0.30
+  diversity_weight: 0.30
+  completeness_weight: 0.20
+  maturity_weight: 0.20
+  agreement_both: 1.00
+  agreement_rules_only: 0.65
+  agreement_ml_only: 0.45
+  diversity_target_categories: 3
+  cap_immature_baseline: 0.60   # applied when maturity < 0.5
+  cap_single_signal: 0.45
+
+risk_decay:
+  half_life_days: 7
+
+anomaly:
+  enabled: true
+  n_estimators: 200
+  max_samples: 256
+  contamination: 0.01
+  random_state: 42
+  min_cohort_size: 30
+  min_training_rows: 50
