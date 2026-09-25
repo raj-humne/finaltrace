@@ -1,0 +1,164 @@
+@import "tailwindcss";
+@import "@fontsource/archivo/400.css";
+@import "@fontsource/archivo/500.css";
+@import "@fontsource/archivo/600.css";
+@import "@fontsource/source-serif-4/400.css";
+@import "@fontsource/source-serif-4/400-italic.css";
+@import "@fontsource/jetbrains-mono/400.css";
+@import "@fontsource/jetbrains-mono/500.css";
+
+:root {
+  --font-interface: "Archivo", ui-sans-serif, system-ui, sans-serif;
+  --font-narrative: "Source Serif 4", Georgia, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Surfaces and ink — light (default in :root, overridden dark below) */
+  --color-page: #F1F3F4;
+  --color-surface: #FAFBFB;
+  --color-surface-raised: #FFFFFF;
+  --color-ink: #0B0F10;
+  --color-ink-secondary: #4C585C;
+  --color-ink-muted: #77858A;
+  --color-hairline: rgba(11, 15, 16, 0.10);
+  --color-gridline: #E3E7E8;
+
+  /* Categorical — five log sources (light) */
+  --color-source-file: #1baf7a;
+  --color-source-logon: #2a78d6;
+  --color-source-email: #eda100;
+  --color-source-device: #4a3aa7;
+  --color-source-http: #e87ba4;
+
+  /* Sequential — ember risk ramp */
+  --color-ember-100: #FDE4C8;
+  --color-ember-200: #F9C68B;
+  --color-ember-300: #F0A24E;
+  --color-ember-400: #DE7F1C;
+  --color-ember-500: #B9640F;
+  --color-ember-600: #8F4B0C;
+  --color-ember-700: #6A360A;
+
+  /* Kill-chain stage ramp (blue) */
+  --color-stage-100: #cde2fb;
+  --color-stage-700: #184f95;
+
+  /* Status — reserved */
+  --color-status-auto-flag: #d03b3b;
+  --color-status-review: #ec835a;
+  --color-status-monitor: #fab219;
+  --color-status-suppressed: var(--color-ink-muted);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-page: #0E1315;
+    --color-surface: #151B1E;
+    --color-surface-raised: #1C2428;
+    --color-ink: #F2F5F6;
+    --color-ink-secondary: #A9B6BA;
+    --color-ink-muted: #6F7D82;
+    --color-hairline: rgba(242, 245, 246, 0.10);
+    --color-gridline: #232C30;
+
+    --color-source-file: #199e70;
+    --color-source-logon: #3987e5;
+    --color-source-email: #c98500;
+    --color-source-device: #9085e9;
+    --color-source-http: #d55181;
+  }
+}
+
+:root[data-theme="dark"] {
+  --color-page: #0E1315;
+  --color-surface: #151B1E;
+  --color-surface-raised: #1C2428;
+  --color-ink: #F2F5F6;
+  --color-ink-secondary: #A9B6BA;
+  --color-ink-muted: #6F7D82;
+  --color-hairline: rgba(242, 245, 246, 0.10);
+  --color-gridline: #232C30;
+
+  --color-source-file: #199e70;
+  --color-source-logon: #3987e5;
+  --color-source-email: #c98500;
+  --color-source-device: #9085e9;
+  --color-source-http: #d55181;
+}
+
+@theme inline {
+  --font-sans: var(--font-interface);
+  --font-serif: var(--font-narrative);
+  --font-mono: var(--font-mono);
+
+  --color-page: var(--color-page);
+  --color-surface: var(--color-surface);
+  --color-surface-raised: var(--color-surface-raised);
+  --color-ink: var(--color-ink);
+  --color-ink-secondary: var(--color-ink-secondary);
+  --color-ink-muted: var(--color-ink-muted);
+  --color-hairline: var(--color-hairline);
+  --color-gridline: var(--color-gridline);
+
+  --color-source-file: var(--color-source-file);
+  --color-source-logon: var(--color-source-logon);
+  --color-source-email: var(--color-source-email);
+  --color-source-device: var(--color-source-device);
+  --color-source-http: var(--color-source-http);
+
+  --color-ember-100: var(--color-ember-100);
+  --color-ember-200: var(--color-ember-200);
+  --color-ember-300: var(--color-ember-300);
+  --color-ember-400: var(--color-ember-400);
+  --color-ember-500: var(--color-ember-500);
+  --color-ember-600: var(--color-ember-600);
+  --color-ember-700: var(--color-ember-700);
+
+  --color-stage-100: var(--color-stage-100);
+  --color-stage-700: var(--color-stage-700);
+
+  --color-status-auto-flag: var(--color-status-auto-flag);
+  --color-status-review: var(--color-status-review);
+  --color-status-monitor: var(--color-status-monitor);
+  --color-status-suppressed: var(--color-status-suppressed);
+}
+
+* {
+  border-color: var(--color-hairline);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-page);
+  color: var(--color-ink);
+  font-family: var(--font-interface);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-source-logon);
+  outline-offset: 2px;
+}
+
+.font-narrative {
+  font-family: var(--font-narrative);
+}
+
+.font-mono-tab {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

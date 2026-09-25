@@ -1,0 +1,913 @@
+{
+  "openapi": "3.1.0",
+  "info": { "title": "SentinelTrace API", "version": "1.0.0" },
+  "servers": [{ "url": "/api/v1" }],
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "getHealth",
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/HealthResponse" } } } } }
+      }
+    },
+    "/ingest": {
+      "post": {
+        "operationId": "postIngest",
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/IngestRequest" } } } },
+        "responses": { "202": { "description": "Accepted", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/IngestRunSummary" } } } } }
+      }
+    },
+    "/ingest/runs": {
+      "get": {
+        "operationId": "listIngestRuns",
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "type": "string" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/IngestRunListResponse" } } } } }
+      }
+    },
+    "/ingest/runs/{run_id}": {
+      "get": {
+        "operationId": "getIngestRun",
+        "parameters": [{ "name": "run_id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/IngestRunSummary" } } } } }
+      }
+    },
+    "/users": {
+      "get": {
+        "operationId": "listUsers",
+        "parameters": [
+          { "name": "q", "in": "query", "schema": { "type": "string" } },
+          { "name": "department", "in": "query", "schema": { "type": "string" } },
+          { "name": "role", "in": "query", "schema": { "type": "string" } },
+          { "name": "min_risk", "in": "query", "schema": { "type": "number" } },
+          { "name": "departing_within", "in": "query", "schema": { "type": "integer" } },
+          { "name": "sort", "in": "query", "schema": { "type": "string" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer" } },
+          { "name": "cursor", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserListResponse" } } } } }
+      }
+    },
+    "/users/{user_id}": {
+      "get": {
+        "operationId": "getUser",
+        "parameters": [{ "name": "user_id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserProfile" } } } },
+          "404": { "description": "Not found", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" } } } }
+        }
+      }
+    },
+    "/users/{user_id}/risk": {
+      "get": {
+        "operationId": "getUserRisk",
+        "parameters": [
+          { "name": "user_id", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "date_from", "in": "query", "schema": { "type": "string", "format": "date" } },
+          { "name": "date_to", "in": "query", "schema": { "type": "string", "format": "date" } },
+          { "name": "include", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserRiskSeries" } } } } }
+      }
+    },
+    "/users/{user_id}/timeline": {
+      "get": {
+        "operationId": "getUserTimeline",
+        "parameters": [
+          { "name": "user_id", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "date", "in": "query", "required": true, "schema": { "type": "string", "format": "date" } }
+        ],
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserTimeline" } } } } }
+      }
+    },
+    "/incidents": {
+      "get": {
+        "operationId": "listIncidents",
+        "parameters": [
+          { "name": "lane", "in": "query", "schema": { "type": "string" } },
+          { "name": "status", "in": "query", "schema": { "type": "string" } },
+          { "name": "min_risk", "in": "query", "schema": { "type": "number" } },
+          { "name": "min_confidence", "in": "query", "schema": { "type": "number" } },
+          { "name": "user_id", "in": "query", "schema": { "type": "string" } },
+          { "name": "date_from", "in": "query", "schema": { "type": "string", "format": "date" } },
+          { "name": "date_to", "in": "query", "schema": { "type": "string", "format": "date" } },
+          { "name": "stage_max", "in": "query", "schema": { "type": "integer" } },
+          { "name": "campaign_id", "in": "query", "schema": { "type": "string" } },
+          { "name": "sort", "in": "query", "schema": { "type": "string" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer" } },
+          { "name": "cursor", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/IncidentListResponse" } } } } }
+      }
+    },
+    "/incidents/{incident_id}": {
+      "get": {
+        "operationId": "getIncident",
+        "parameters": [{ "name": "incident_id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/IncidentDetail" } } } },
+          "404": { "description": "Not found", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" } } } }
+        }
+      }
+    },
+    "/incidents/{incident_id}/graph": {
+      "get": {
+        "operationId": "getIncidentGraph",
+        "parameters": [{ "name": "incident_id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/IncidentGraph" } } } } }
+      }
+    },
+    "/incidents/{incident_id}/export": {
+      "get": {
+        "operationId": "exportIncident",
+        "parameters": [
+          { "name": "incident_id", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "format", "in": "query", "schema": { "type": "string", "enum": ["json", "pdf"] } }
+        ],
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EvidencePack" } } } } }
+      }
+    },
+    "/incidents/{incident_id}/review": {
+      "post": {
+        "operationId": "reviewIncident",
+        "parameters": [
+          { "name": "incident_id", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "force", "in": "query", "schema": { "type": "boolean" } }
+        ],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReviewRequest" } } } },
+        "responses": {
+          "201": { "description": "Created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReviewResponse" } } } },
+          "409": { "description": "Conflict", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" } } } }
+        }
+      }
+    },
+    "/campaigns": {
+      "get": {
+        "operationId": "listCampaigns",
+        "parameters": [
+          { "name": "user_id", "in": "query", "schema": { "type": "string" } },
+          { "name": "min_stage", "in": "query", "schema": { "type": "integer" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CampaignListResponse" } } } } }
+      }
+    },
+    "/campaigns/{campaign_id}": {
+      "get": {
+        "operationId": "getCampaign",
+        "parameters": [{ "name": "campaign_id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Campaign" } } } } }
+      }
+    },
+    "/rules": {
+      "get": {
+        "operationId": "listRules",
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RuleListResponse" } } } } }
+      }
+    },
+    "/rules/{rule_id}/stats": {
+      "get": {
+        "operationId": "getRuleStats",
+        "parameters": [
+          { "name": "rule_id", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "date_from", "in": "query", "schema": { "type": "string", "format": "date" } },
+          { "name": "date_to", "in": "query", "schema": { "type": "string", "format": "date" } }
+        ],
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RuleStats" } } } } }
+      }
+    },
+    "/detection/health": {
+      "get": {
+        "operationId": "getDetectionHealth",
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DetectionHealth" } } } } }
+      }
+    },
+    "/eval/report": {
+      "get": {
+        "operationId": "getEvalReport",
+        "parameters": [{ "name": "config_version", "in": "query", "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EvalReport" } } } } }
+      }
+    },
+    "/analyze": {
+      "post": {
+        "operationId": "analyze",
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AnalyzeRequest" } } } },
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AnalyzeResponse" } } } } }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "operationId": "login",
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LoginRequest" } } } },
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LoginResponse" } } } },
+          "401": { "description": "Unauthorized", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" } } } }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "operationId": "logout",
+        "responses": { "204": { "description": "No content" } }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "operationId": "getMe",
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SessionUser" } } } },
+          "401": { "description": "Unauthorized", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" } } } }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string" },
+          "title": { "type": "string" },
+          "status": { "type": "integer" },
+          "detail": { "type": "string" },
+          "instance": { "type": "string" },
+          "trace_id": { "type": "string" }
+        },
+        "required": ["type", "title", "status"]
+      },
+      "LoginRequest": {
+        "type": "object",
+        "properties": { "username": { "type": "string" }, "password": { "type": "string" } },
+        "required": ["username", "password"]
+      },
+      "SessionUser": {
+        "type": "object",
+        "properties": {
+          "analyst_id": { "type": "string" },
+          "name": { "type": "string" },
+          "role": { "type": "string", "enum": ["analyst", "detection_engineer"] }
+        },
+        "required": ["analyst_id", "name", "role"]
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": { "user": { "$ref": "#/components/schemas/SessionUser" } },
+        "required": ["user"]
+      },
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string" },
+          "config_version": { "type": "string" },
+          "data": {
+            "type": "object",
+            "properties": {
+              "ts_min": { "type": "string" },
+              "ts_max": { "type": "string" },
+              "users": { "type": "integer" },
+              "events": { "type": "integer" },
+              "last_pipeline_run": { "type": "string" }
+            }
+          },
+          "engine": {
+            "type": "object",
+            "properties": {
+              "rules_loaded": { "type": "integer" },
+              "cohort_models": { "type": "integer" },
+              "mode": { "type": "string" }
+            }
+          }
+        }
+      },
+      "IngestRequest": {
+        "type": "object",
+        "properties": {
+          "source": { "type": "string" },
+          "adapter": { "type": "string" },
+          "mode": { "type": "string", "enum": ["file", "inline"] },
+          "path": { "type": "string" },
+          "records": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "options": {
+            "type": "object",
+            "properties": { "chunk_size": { "type": "integer" }, "dry_run": { "type": "boolean" } }
+          }
+        },
+        "required": ["source", "adapter", "mode"]
+      },
+      "IngestRunSummary": {
+        "type": "object",
+        "properties": {
+          "run_id": { "type": "string" },
+          "status": { "type": "string" },
+          "source": { "type": "string" },
+          "accepted": { "type": "integer" },
+          "rejected": { "type": "integer" },
+          "duplicates_skipped": { "type": "integer" },
+          "ts_range": { "type": "array", "items": { "type": "string" }, "minItems": 2, "maxItems": 2 },
+          "rejects_sample": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": { "row": { "type": "integer" }, "reason": { "type": "string" }, "raw": { "type": "string" } }
+            }
+          },
+          "links": { "type": "object", "properties": { "self": { "type": "string" } } }
+        }
+      },
+      "IngestRunListResponse": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/IngestRunSummary" } },
+          "next_cursor": { "type": ["string", "null"] },
+          "total": { "type": "integer" }
+        }
+      },
+      "UserListItem": {
+        "type": "object",
+        "properties": {
+          "user_id": { "type": "string" },
+          "name": { "type": "string" },
+          "role": { "type": "string" },
+          "department": { "type": "string" },
+          "cohort_key": { "type": "string" },
+          "current_risk": { "type": "number" },
+          "risk_ewma": { "type": "number" },
+          "trend": { "type": "string", "enum": ["rising", "falling", "flat"] },
+          "open_incidents": { "type": "integer" },
+          "departing_in_days": { "type": ["integer", "null"] }
+        }
+      },
+      "UserListResponse": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/UserListItem" } },
+          "next_cursor": { "type": ["string", "null"] },
+          "total": { "type": "integer" }
+        }
+      },
+      "UserProfile": {
+        "type": "object",
+        "properties": {
+          "user_id": { "type": "string" },
+          "name": { "type": "string" },
+          "email": { "type": "string" },
+          "org": {
+            "type": "object",
+            "properties": {
+              "role": { "type": "string" },
+              "department": { "type": "string" },
+              "team": { "type": "string" },
+              "supervisor": { "type": "string" },
+              "cohort_size": { "type": "integer" }
+            }
+          },
+          "tenure_days": { "type": "integer" },
+          "departure_date": { "type": ["string", "null"] },
+          "first_seen": { "type": "string" },
+          "last_seen": { "type": "string" },
+          "baseline": {
+            "type": "object",
+            "properties": {
+              "days_available": { "type": "integer" },
+              "maturity": { "type": "number" },
+              "working_window": {
+                "type": "object",
+                "properties": { "start_min": { "type": "integer" }, "end_min": { "type": "integer" } }
+              }
+            }
+          },
+          "current_risk": { "type": "number" },
+          "risk_ewma": { "type": "number" },
+          "incident_counts": {
+            "type": "object",
+            "properties": {
+              "AUTO_FLAG": { "type": "integer" },
+              "ANALYST_REVIEW": { "type": "integer" },
+              "MONITOR": { "type": "integer" }
+            }
+          }
+        }
+      },
+      "UserRiskSeries": {
+        "type": "object",
+        "properties": {
+          "user_id": { "type": "string" },
+          "window": { "type": "object", "properties": { "from": { "type": "string" }, "to": { "type": "string" } } },
+          "series": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "date": { "type": "string" },
+                "risk": { "type": "number" },
+                "confidence": { "type": "number" },
+                "risk_ewma": { "type": "number" },
+                "signal_count": { "type": "integer" },
+                "incident_ids": { "type": "array", "items": { "type": "string" } }
+              }
+            }
+          },
+          "peer_band": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "date": { "type": "string" },
+                "p50": { "type": "number" },
+                "p90": { "type": "number" },
+                "p99": { "type": "number" }
+              }
+            }
+          },
+          "summary": {
+            "type": "object",
+            "properties": {
+              "peak_risk": { "type": "number" },
+              "peak_date": { "type": "string" },
+              "days_above_threshold": { "type": "integer" },
+              "trend": { "type": "string" }
+            }
+          }
+        }
+      },
+      "TimelineEvent": {
+        "type": "object",
+        "properties": {
+          "event_id": { "type": "string" },
+          "ts": { "type": "string" },
+          "source": { "type": "string", "enum": ["logon", "device", "file", "http", "email"] },
+          "action": { "type": "string" },
+          "pc_id": { "type": "string" },
+          "attrs": { "type": "object", "additionalProperties": true },
+          "signal_ids": { "type": "array", "items": { "type": "integer" } },
+          "risk_after": { "type": "number" },
+          "stage": { "type": "integer" }
+        }
+      },
+      "UserTimeline": {
+        "type": "object",
+        "properties": {
+          "date": { "type": "string" },
+          "events": { "type": "array", "items": { "$ref": "#/components/schemas/TimelineEvent" } },
+          "working_window": {
+            "type": "object",
+            "properties": { "start_min": { "type": "integer" }, "end_min": { "type": "integer" } }
+          },
+          "final_risk": { "type": "number" }
+        }
+      },
+      "TriageLane": { "type": "string", "enum": ["AUTO_FLAG", "ANALYST_REVIEW", "MONITOR", "SUPPRESSED"] },
+      "IncidentListItem": {
+        "type": "object",
+        "properties": {
+          "incident_id": { "type": "string" },
+          "user_id": { "type": "string" },
+          "user_name": { "type": "string" },
+          "department": { "type": "string" },
+          "window": { "type": "object", "properties": { "start": { "type": "string" }, "end": { "type": "string" } } },
+          "risk": { "type": "number" },
+          "confidence": { "type": "number" },
+          "triage_lane": { "$ref": "#/components/schemas/TriageLane" },
+          "status": { "type": "string", "enum": ["open", "closed"] },
+          "headline": { "type": "string" },
+          "killchain_stages": { "type": "array", "items": { "type": "integer" } },
+          "max_stage": { "type": "integer" },
+          "signal_count": { "type": "integer" },
+          "event_count": { "type": "integer" },
+          "campaign_id": { "type": ["string", "null"] },
+          "top_signal": {
+            "type": "object",
+            "properties": { "rule_id": { "type": "string" }, "delta": { "type": "number" } }
+          },
+          "baseline_days": { "type": ["integer", "null"] },
+          "departing_in_days": { "type": ["integer", "null"] },
+          "campaign_incident_count": { "type": ["integer", "null"] }
+        }
+      },
+      "IncidentListResponse": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/IncidentListItem" } },
+          "next_cursor": { "type": ["string", "null"] },
+          "total": { "type": "integer" },
+          "facets": {
+            "type": "object",
+            "properties": {
+              "lane": { "type": "object", "additionalProperties": { "type": "integer" } },
+              "max_stage": { "type": "object", "additionalProperties": { "type": "integer" } }
+            }
+          }
+        }
+      },
+      "Signal": {
+        "type": "object",
+        "properties": {
+          "signal_id": { "type": "integer" },
+          "rule_id": { "type": "string" },
+          "name": { "type": "string" },
+          "category": { "type": "string" },
+          "stage": { "type": "integer" },
+          "strength": { "type": "number" },
+          "weight": { "type": "number" },
+          "contribution": { "type": "number" },
+          "phrase": { "type": "string" },
+          "detail": {
+            "type": "object",
+            "properties": {
+              "feature": { "type": "string" },
+              "observed": { "type": "number" },
+              "threshold": { "type": "number" },
+              "z_self": { "type": "number" },
+              "z_peer": { "type": "number" }
+            }
+          },
+          "evidence_event_ids": { "type": "array", "items": { "type": "string" } },
+          "references": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "AttributionItem": {
+        "type": "object",
+        "properties": {
+          "signal_id": { "type": "integer" },
+          "rule_id": { "type": "string" },
+          "risk_without": { "type": "number" },
+          "delta": { "type": "number" },
+          "rank": { "type": "integer" },
+          "in_minimal_set": { "type": "boolean" }
+        }
+      },
+      "IncidentDetail": {
+        "type": "object",
+        "properties": {
+          "incident_id": { "type": "string" },
+          "user": {
+            "type": "object",
+            "properties": {
+              "user_id": { "type": "string" },
+              "name": { "type": "string" },
+              "role": { "type": "string" },
+              "department": { "type": "string" },
+              "cohort_size": { "type": "integer" }
+            }
+          },
+          "window": {
+            "type": "object",
+            "properties": { "start": { "type": "string" }, "end": { "type": "string" }, "duration_min": { "type": "number" } }
+          },
+          "score": {
+            "type": "object",
+            "properties": {
+              "risk": { "type": "number" },
+              "confidence": { "type": "number" },
+              "triage_lane": { "$ref": "#/components/schemas/TriageLane" },
+              "breakdown": {
+                "type": "object",
+                "properties": {
+                  "prior_logit": { "type": "number" },
+                  "rule_points": { "type": "number" },
+                  "ml_points": { "type": "number" },
+                  "correlation_points": { "type": "number" },
+                  "total_logit": { "type": "number" },
+                  "tau": { "type": "number" }
+                }
+              },
+              "confidence_terms": {
+                "type": "object",
+                "properties": {
+                  "agreement": { "type": "number" },
+                  "diversity": { "type": "number" },
+                  "completeness": { "type": "number" },
+                  "maturity": { "type": "number" },
+                  "caps_applied": { "type": "array", "items": { "type": "string" } }
+                }
+              }
+            }
+          },
+          "narrative": {
+            "type": "object",
+            "properties": {
+              "headline": { "type": "string" },
+              "summary": { "type": "string" },
+              "detail_bullets": { "type": "array", "items": { "type": "string" } },
+              "template_ids": { "type": "array", "items": { "type": "string" } }
+            }
+          },
+          "signals": { "type": "array", "items": { "$ref": "#/components/schemas/Signal" } },
+          "attribution": {
+            "type": "object",
+            "properties": {
+              "note": { "type": "string" },
+              "items": { "type": "array", "items": { "$ref": "#/components/schemas/AttributionItem" } },
+              "minimal_sufficient_set": { "type": "array", "items": { "type": "string" } },
+              "alert_threshold": { "type": "number" }
+            }
+          },
+          "campaign": {
+            "type": ["object", "null"],
+            "properties": {
+              "campaign_id": { "type": "string" },
+              "incident_count": { "type": "integer" },
+              "first_seen": { "type": "string" },
+              "last_seen": { "type": "string" },
+              "stage_progression": { "type": "array", "items": { "type": "integer" } }
+            }
+          },
+          "status": { "type": "string", "enum": ["open", "closed"] },
+          "review": {
+            "type": ["object", "null"],
+            "properties": {
+              "verdict": { "type": "string" },
+              "note": { "type": "string" },
+              "analyst_id": { "type": "string" },
+              "reviewed_at": { "type": "string" }
+            }
+          },
+          "config_version": { "type": "string" },
+          "links": {
+            "type": "object",
+            "properties": { "graph": { "type": "string" }, "export": { "type": "string" } }
+          }
+        }
+      },
+      "GraphNode": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "ts": { "type": "string" },
+          "source": { "type": "string" },
+          "action": { "type": "string" },
+          "label": { "type": "string" },
+          "stage": { "type": "integer" },
+          "risk_contribution": { "type": "number" },
+          "has_signal": { "type": "boolean" },
+          "pc_id": { "type": "string" },
+          "user_id": { "type": "string" }
+        }
+      },
+      "GraphEdge": {
+        "type": "object",
+        "properties": {
+          "source": { "type": "string" },
+          "target": { "type": "string" },
+          "gap_seconds": { "type": "integer" },
+          "gap_label": { "type": "string" },
+          "type": { "type": "string", "enum": ["temporal", "stage_advance", "shared_pc", "shared_file"] },
+          "weight": { "type": "number" }
+        }
+      },
+      "IncidentGraph": {
+        "type": "object",
+        "properties": {
+          "incident_id": { "type": "string" },
+          "over_dense": { "type": "boolean" },
+          "nodes": { "type": "array", "items": { "$ref": "#/components/schemas/GraphNode" } },
+          "edges": { "type": "array", "items": { "$ref": "#/components/schemas/GraphEdge" } },
+          "layout_hint": { "type": "string" },
+          "stats": {
+            "type": "object",
+            "properties": {
+              "node_count": { "type": "integer" },
+              "edge_count": { "type": "integer" },
+              "component_diameter": { "type": "integer" }
+            }
+          }
+        }
+      },
+      "EvidencePack": {
+        "type": "object",
+        "properties": {
+          "incident": { "$ref": "#/components/schemas/IncidentDetail" },
+          "raw_events": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "config_snapshot": { "type": "object", "additionalProperties": true },
+          "watermark": {
+            "type": "object",
+            "properties": { "exported_by": { "type": "string" }, "exported_at": { "type": "string" } }
+          }
+        }
+      },
+      "SuppressionProposal": {
+        "type": "object",
+        "properties": {
+          "scope": { "type": "string", "enum": ["user_rule", "rule"] },
+          "user_id": { "type": ["string", "null"] },
+          "rule_id": { "type": "string" },
+          "expires_at": { "type": "string" }
+        }
+      },
+      "ReviewRequest": {
+        "type": "object",
+        "properties": {
+          "verdict": { "type": "string", "enum": ["confirmed_threat", "benign", "inconclusive"] },
+          "note": { "type": "string" },
+          "analyst_id": { "type": "string" },
+          "time_to_triage_sec": { "type": "integer" },
+          "propose_suppression": { "oneOf": [{ "$ref": "#/components/schemas/SuppressionProposal" }, { "type": "null" }] }
+        },
+        "required": ["verdict", "analyst_id"]
+      },
+      "ReviewResponse": {
+        "type": "object",
+        "properties": {
+          "review_id": { "type": "integer" },
+          "incident_id": { "type": "string" },
+          "verdict": { "type": "string" },
+          "reviewed_at": { "type": "string" },
+          "incident_status": { "type": "string" },
+          "suppression": { "type": ["object", "null"], "properties": { "status": { "type": "string" } } },
+          "effects": {
+            "type": "object",
+            "properties": {
+              "rule_stats_updated": { "type": "array", "items": { "type": "string" } },
+              "user_risk_ewma_adjusted": { "type": "boolean" }
+            }
+          }
+        }
+      },
+      "CampaignStageEvent": {
+        "type": "object",
+        "properties": {
+          "date": { "type": "string" },
+          "stage": { "type": "integer" },
+          "incident_id": { "type": "string" },
+          "risk": { "type": "number" },
+          "headline": { "type": "string" }
+        }
+      },
+      "Campaign": {
+        "type": "object",
+        "properties": {
+          "campaign_id": { "type": "string" },
+          "user_id": { "type": "string" },
+          "first_seen": { "type": "string" },
+          "last_seen": { "type": "string" },
+          "incident_count": { "type": "integer" },
+          "peak_risk": { "type": "number" },
+          "campaign_risk": { "type": "number" },
+          "max_stage": { "type": "integer" },
+          "stage_progression": { "type": "array", "items": { "$ref": "#/components/schemas/CampaignStageEvent" } },
+          "narrative": { "type": "string" }
+        }
+      },
+      "CampaignListItem": {
+        "type": "object",
+        "properties": {
+          "campaign_id": { "type": "string" },
+          "user_id": { "type": "string" },
+          "user_name": { "type": "string" },
+          "first_seen": { "type": "string" },
+          "last_seen": { "type": "string" },
+          "incident_count": { "type": "integer" },
+          "peak_risk": { "type": "number" },
+          "max_stage": { "type": "integer" }
+        }
+      },
+      "CampaignListResponse": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/CampaignListItem" } },
+          "total": { "type": "integer" }
+        }
+      },
+      "RuleCatalogueItem": {
+        "type": "object",
+        "properties": {
+          "rule_id": { "type": "string" },
+          "name": { "type": "string" },
+          "category": { "type": "string" },
+          "stage": { "type": "integer" },
+          "weight": { "type": "number" },
+          "requires_baseline": { "type": "boolean" },
+          "description": { "type": "string" }
+        }
+      },
+      "RuleListResponse": {
+        "type": "object",
+        "properties": {
+          "config_version": { "type": "string" },
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/RuleCatalogueItem" } }
+        }
+      },
+      "RuleStats": {
+        "type": "object",
+        "properties": {
+          "rule_id": { "type": "string" },
+          "configured_weight": { "type": "number" },
+          "fire_count": { "type": "integer" },
+          "fire_rate_per_user_day": { "type": "number" },
+          "reviewed": { "type": "integer" },
+          "confirmed": { "type": "integer" },
+          "benign": { "type": "integer" },
+          "inconclusive": { "type": "integer" },
+          "observed_precision": { "type": "number" },
+          "measured_log_odds": { "type": "number" },
+          "weight_drift": { "type": "number" },
+          "recommendation": { "type": "string" }
+        }
+      },
+      "DetectionHealth": {
+        "type": "object",
+        "properties": {
+          "window": { "type": "object", "properties": { "from": { "type": "string" }, "to": { "type": "string" } } },
+          "alert_volume": {
+            "type": "object",
+            "properties": { "incidents_per_day": { "type": "number" }, "per_1k_users_per_day": { "type": "number" } }
+          },
+          "lane_mix": { "type": "object", "additionalProperties": { "type": "integer" } },
+          "compression": {
+            "type": "object",
+            "properties": { "signals_per_incident_mean": { "type": "number" }, "events_per_incident_mean": { "type": "number" } }
+          },
+          "calibration": {
+            "type": "object",
+            "properties": {
+              "bins": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "confidence_range": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
+                    "n": { "type": "integer" },
+                    "observed_precision": { "type": "number" }
+                  }
+                }
+              },
+              "ece": { "type": "number" }
+            }
+          },
+          "top_firing_rules": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": { "rule_id": { "type": "string" }, "count": { "type": "integer" }, "observed_precision": { "type": "number" } }
+            }
+          },
+          "warnings": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "EvalReport": {
+        "type": "object",
+        "properties": {
+          "config_version": { "type": "string" },
+          "data_source": { "type": "string" },
+          "generated_at": { "type": "string" },
+          "primary_metrics": {
+            "type": "object",
+            "properties": {
+              "insider_recall": { "type": "array", "items": { "type": "number" } },
+              "incident_precision": { "type": "array", "items": { "type": "number" } },
+              "auto_flag_precision": { "type": "array", "items": { "type": "number" } },
+              "pr_auc": { "type": "array", "items": { "type": "number" } },
+              "median_time_to_detect_days": { "type": "number" }
+            }
+          },
+          "pr_curve": {
+            "type": "array",
+            "items": { "type": "object", "properties": { "precision": { "type": "number" }, "recall": { "type": "number" } } }
+          },
+          "per_scenario_recall": { "type": "object", "additionalProperties": { "type": "number" } },
+          "time_to_detect_distribution": { "type": "array", "items": { "type": "number" } }
+        }
+      },
+      "AnalyzeRequest": {
+        "type": "object",
+        "properties": {
+          "user_id": { "type": "string" },
+          "date_from": { "type": "string" },
+          "date_to": { "type": "string" },
+          "options": {
+            "type": "object",
+            "properties": { "include_graph": { "type": "boolean" }, "force_recompute": { "type": "boolean" } }
+          }
+        },
+        "required": ["user_id", "date_from", "date_to"]
+      },
+      "AnalyzeResponse": {
+        "type": "object",
+        "properties": {
+          "user_id": { "type": "string" },
+          "window": { "type": "object", "properties": { "from": { "type": "string" }, "to": { "type": "string" } } },
+          "computed_in_ms": { "type": "integer" },
+          "from_cache": { "type": "boolean" },
+          "peak_risk": { "type": "number" },
+          "incidents": { "type": "array", "items": { "type": "string" } },
+          "campaigns": { "type": "array", "items": { "type": "string" } },
+          "daily": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "date": { "type": "string" },
+                "risk": { "type": "number" },
+                "confidence": { "type": "number" },
+                "signal_count": { "type": "integer" }
+              }
+            }
+          },
+          "narrative": { "type": "string" }
+        }
+      }
+    }
+  }
+}

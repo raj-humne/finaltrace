@@ -1,0 +1,152 @@
+import { useMemo, useRef, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { useIncident, useIncidentGraph } from "@/hooks/useIncidents";
+import { useCampaign } from "@/hooks/useCampaign";
+import { ChainSpine } from "@/components/shared/ChainSpine";
+import { ScoreMeter } from "@/components/shared/ScoreMeter";
+import { LaneChip } from "@/components/shared/LaneChip";
+import { CorrelationGraph } from "@/components/shared/CorrelationGraph";
+import { SignalCard } from "@/components/shared/SignalCard";
+import { VerdictForm } from "@/components/shared/VerdictForm";
+import { ErrorState } from "@/components/shared/EmptyState";
+import { formatDate, formatTime } from "@/lib/utils";
+
+export function IncidentPage() {
+  const { incidentId } = useParams<{ incidentId: string }>();
+  const { data: incident, isLoading, isError } = useIncident(incidentId);
+  const { data: graph } = useIncidentGraph(incidentId);
+  const { data: campaign } = useCampaign(incident?.campaign?.campaign_id);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const startedAt = useRef(Date.now()).current;
+
+  const activeStages = useMemo(
+    () => [...new Set((incident?.signals ?? []).map((s) => s.stage).filter((s): s is number => s != null))].sort((a, b) => a - b),
+    [incident]
+  );
+
+  const eventPins = useMemo(
+    () =>
+      (graph?.nodes ?? [])
+        .filter((n) => n.has_signal)
+        .map((n) => ({ ts: n.ts!, label: n.label ?? n.action ?? "", stage: n.stage ?? 0 })),
+    [graph]
+  );
+
+  if (isLoading) return <p className="text-sm text-(--color-ink-muted)">Loading…</p>;
+  if (isError || !incident) return <ErrorState title="Could not load this incident." />;
+
+  const risk = incident.score?.risk ?? 0;
+  const confidence = incident.score?.confidence ?? 0;
+  const attributionBySignal = new Map((incident.attribution?.items ?? []).map((a) => [String(a.signal_id), a]));
+  const selectedSignal = selectedId
+    ? (incident.signals ?? []).find((s) => (s.evidence_event_ids ?? []).includes(selectedId) || String(s.signal_id) === selectedId)
+    : undefined;
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        <Link to="/incidents" className="text-sm text-(--color-ink-muted) hover:text-(--color-ink)">
+          &larr; Queue
+        </Link>
+        <div className="mt-2 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">{incident.narrative?.headline}</h1>
+            <p className="mt-1 text-sm text-(--color-ink-secondary)">
+              {incident.signals?.length ?? 0} correlated signals across {new Set((incident.signals ?? []).map((s) => s.category)).size} categories
+            </p>
+          </div>
+          <span className="shrink-0 font-mono-tab text-xs text-(--color-ink-muted)">{incident.incident_id}</span>
+        </div>
+      </div>
+
+      <div className="flex items-start gap-8 rounded-lg border border-(--color-hairline) bg-(--color-surface-raised) p-4">
+        <LaneChip lane={incident.score?.triage_lane ?? "MONITOR"} className="mt-1 shrink-0" />
+        <ScoreMeter label="Risk" value={risk} threshold={incident.attribution?.alert_threshold ?? 40} thresholdLabel={`alert at ${incident.attribution?.alert_threshold ?? 40}`} className="flex-1" />
+        <ScoreMeter
+          label="Confidence"
+          value={confidence}
+          max={1}
+          threshold={0.65}
+          thresholdLabel="auto-flag at 0.65"
+          format={(v) => v.toFixed(2)}
+          tone="neutral"
+          className="flex-1"
+        />
+      </div>
+
+      {incident.narrative?.summary && (
+        <p className="font-narrative max-w-[68ch] text-lg leading-[1.55] text-(--color-ink)">{incident.narrative.summary}</p>
+      )}
+
+      <section className="rounded-lg border border-(--color-hairline) bg-(--color-surface-raised) p-4">
+        <h2 className="mb-4 text-sm font-medium text-(--color-ink-secondary)">The chain</h2>
+        <ChainSpine size="lg" activeStages={activeStages} events={eventPins} />
+        {incident.window?.start && incident.window?.end && (
+          <p className="mt-2 text-xs text-(--color-ink-muted)">
+            {formatDate(incident.window.start)}, {formatTime(incident.window.start)}–{formatTime(incident.window.end)} · {incident.window.duration_min?.toFixed(1)} min
+          </p>
+        )}
+      </section>
+
+      {campaign && (
+        <section className="rounded-lg border border-(--color-hairline) bg-(--color-surface-raised) p-4">
+          <div className="mb-4 flex items-baseline justify-between">
+            <h2 className="text-sm font-medium text-(--color-ink-secondary)">
+              Campaign {campaign.campaign_id} spans {Math.round((new Date(campaign.last_seen!).getTime() - new Date(campaign.first_seen!).getTime()) / 86400000)} days
+            </h2>
+            <span className="font-mono-tab text-sm text-(--color-ember-500)">campaign risk {campaign.campaign_risk?.toFixed(1)}</span>
+          </div>
+          <ChainSpine
+            size="campaign"
+            activeStages={[]}
+            campaignPoints={(campaign.stage_progression ?? []).map((p) => ({
+              date: p.date!,
+              stage: p.stage ?? 0,
+              risk: p.risk ?? 0,
+              headline: p.headline ?? "",
+              incidentId: p.incident_id!,
+            }))}
+          />
+          {campaign.narrative && <p className="font-narrative mt-4 max-w-[68ch] text-base leading-[1.55]">{campaign.narrative}</p>}
+        </section>
+      )}
+
+      {graph && (
+        <section className="rounded-lg border border-(--color-hairline) bg-(--color-surface-raised) p-4">
+          <h2 className="mb-2 text-sm font-medium text-(--color-ink-secondary)">Correlation graph</h2>
+          <CorrelationGraph nodes={graph.nodes ?? []} edges={graph.edges ?? []} selectedId={selectedId} onSelect={setSelectedId} overDense={graph.over_dense} />
+        </section>
+      )}
+
+      <section className="rounded-lg border border-(--color-hairline) bg-(--color-surface-raised)">
+        <div className="flex items-center justify-between border-b border-(--color-hairline) px-4 py-3">
+          <h2 className="text-sm font-medium text-(--color-ink-secondary)">Evidence</h2>
+          <span className="text-xs text-(--color-ink-muted)">{incident.attribution?.note}</span>
+        </div>
+        {(incident.signals ?? [])
+          .slice()
+          .sort((a, b) => (attributionBySignal.get(String(b.signal_id))?.delta ?? 0) - (attributionBySignal.get(String(a.signal_id))?.delta ?? 0))
+          .map((s) => (
+            <SignalCard
+              key={s.signal_id}
+              signal={s}
+              attribution={attributionBySignal.get(String(s.signal_id))}
+              risk={risk}
+              selected={selectedId != null && ((s.evidence_event_ids ?? []).includes(selectedId) || selectedSignal?.signal_id === s.signal_id)}
+              onSelect={() => setSelectedId((s.evidence_event_ids ?? [])[0] ?? String(s.signal_id))}
+            />
+          ))}
+        {incident.attribution?.minimal_sufficient_set && (
+          <p className="border-t border-(--color-hairline) px-4 py-3 text-sm text-(--color-ink-secondary)">
+            {incident.attribution.minimal_sufficient_set.length} of these {incident.signals?.length ?? 0} signals are enough on their own to clear the threshold.
+          </p>
+        )}
+      </section>
+
+      <section className="rounded-lg border border-(--color-hairline) bg-(--color-surface-raised) p-4">
+        <h2 className="mb-3 text-sm font-medium text-(--color-ink-secondary)">Record a verdict</h2>
+        <VerdictForm incidentId={incident.incident_id!} closed={incident.status === "closed"} startedAt={startedAt} />
+      </section>
+    </div>
+  );
+}
