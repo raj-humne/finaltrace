@@ -10,6 +10,7 @@ import { CorrelationGraph } from "@/components/shared/CorrelationGraph";
 import { SignalCard } from "@/components/shared/SignalCard";
 import { VerdictForm } from "@/components/shared/VerdictForm";
 import { ErrorState } from "@/components/shared/EmptyState";
+import { Skeleton } from "@/components/shared/Skeleton";
 import { formatDate, formatTime } from "@/lib/utils";
 
 export function IncidentPage() {
@@ -33,7 +34,30 @@ export function IncidentPage() {
     [graph]
   );
 
-  if (isLoading) return <p className="text-sm text-(--color-ink-muted)">Loading…</p>;
+  if (isLoading) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-7 w-2/3" />
+          <Skeleton className="h-4 w-1/3" />
+        </div>
+        <div className="divide-y divide-(--color-hairline) rounded-lg border border-(--color-hairline) bg-(--color-surface-raised)">
+          <div className="flex items-start gap-8 p-4">
+            <Skeleton className="h-5 w-24" />
+            <Skeleton className="h-10 flex-1" />
+            <Skeleton className="h-10 flex-1" />
+          </div>
+          <div className="p-4">
+            <Skeleton className="h-24 w-full max-w-[68ch]" />
+          </div>
+          <div className="p-4">
+            <Skeleton className="h-24 w-full" />
+          </div>
+        </div>
+      </div>
+    );
+  }
   if (isError || !incident) return <ErrorState title="Could not load this incident." />;
 
   const risk = incident.score?.risk ?? 0;
@@ -64,94 +88,104 @@ export function IncidentPage() {
         </div>
       </div>
 
-      <div className="flex items-start gap-8 rounded-lg border border-(--color-hairline) bg-(--color-surface-raised) p-4">
-        <LaneChip lane={(incident.score?.triage_lane as TriageLane) ?? "MONITOR"} className="mt-1 shrink-0" />
-        <ScoreMeter label="Risk" value={risk} threshold={incident.attribution?.alert_threshold ?? 40} thresholdLabel={`alert at ${incident.attribution?.alert_threshold ?? 40}`} className="flex-1" />
-        <ScoreMeter
-          label="Confidence"
-          value={confidence}
-          max={1}
-          threshold={0.65}
-          thresholdLabel="auto-flag at 0.65"
-          format={(v) => v.toFixed(2)}
-          tone="neutral"
-          className="flex-1"
-        />
-      </div>
-
-      {incident.narrative?.summary && (
-        <p className="font-narrative max-w-[68ch] text-lg leading-[1.55] text-(--color-ink)">{incident.narrative.summary}</p>
-      )}
-
-      <section className="rounded-lg border border-(--color-hairline) bg-(--color-surface-raised) p-4">
-        <h2 className="mb-4 text-sm font-medium text-(--color-ink-secondary)">The chain</h2>
-        <ChainSpine size="lg" activeStages={activeStages} events={eventPins} />
-        {windowStart && windowEnd && (
-          <p className="mt-2 text-xs text-(--color-ink-muted)">
-            {formatDate(windowStart)}, {formatTime(windowStart)}–{formatTime(windowEnd)} · {windowDurationMin?.toFixed(1)} min
-          </p>
-        )}
-      </section>
-
-      {campaign && (
-        <section className="rounded-lg border border-(--color-hairline) bg-(--color-surface-raised) p-4">
-          <div className="mb-4 flex items-baseline justify-between">
-            <h2 className="text-sm font-medium text-(--color-ink-secondary)">
-              Campaign {campaign.campaign_id} spans {Math.round((new Date(campaign.last_seen!).getTime() - new Date(campaign.first_seen!).getTime()) / 86400000)} days
-            </h2>
-            <span className="font-mono-tab text-sm text-(--color-ember-500)">campaign risk {campaign.campaign_risk?.toFixed(1)}</span>
-          </div>
-          <ChainSpine
-            size="campaign"
-            activeStages={[]}
-            campaignPoints={(campaign.stage_progression ?? []).map((p) => ({
-              date: p.date!,
-              stage: p.stage ?? 0,
-              risk: p.risk ?? 0,
-              headline: p.headline ?? "",
-              incidentId: p.incident_id!,
-            }))}
+      {/* One continuous document frame, hairline-divided — not a stack of
+          identical cards. Only the correlation graph and evidence list get
+          their own visual weight below because they're genuinely instruments
+          and a set, not prose (docs/06 section 5.2). */}
+      <div className="divide-y divide-(--color-hairline) rounded-lg border border-(--color-hairline) bg-(--color-surface-raised)">
+        <div className="flex items-start gap-8 p-4">
+          <LaneChip lane={(incident.score?.triage_lane as TriageLane) ?? "MONITOR"} className="mt-1 shrink-0" />
+          <ScoreMeter label="Risk" value={risk} threshold={incident.attribution?.alert_threshold ?? 40} thresholdLabel={`alert at ${incident.attribution?.alert_threshold ?? 40}`} className="flex-1" />
+          <ScoreMeter
+            label="Confidence"
+            value={confidence}
+            max={1}
+            threshold={0.65}
+            thresholdLabel="auto-flag at 0.65"
+            format={(v) => v.toFixed(2)}
+            tone="neutral"
+            className="flex-1"
           />
-          {campaign.narrative && <p className="font-narrative mt-4 max-w-[68ch] text-base leading-[1.55]">{campaign.narrative}</p>}
-        </section>
-      )}
-
-      {graph && (
-        <section className="rounded-lg border border-(--color-hairline) bg-(--color-surface-raised) p-4">
-          <h2 className="mb-2 text-sm font-medium text-(--color-ink-secondary)">Correlation graph</h2>
-          <CorrelationGraph nodes={graph.nodes ?? []} edges={graph.edges ?? []} selectedId={selectedId} onSelect={setSelectedId} overDense={graph.over_dense} />
-        </section>
-      )}
-
-      <section className="rounded-lg border border-(--color-hairline) bg-(--color-surface-raised)">
-        <div className="flex items-center justify-between border-b border-(--color-hairline) px-4 py-3">
-          <h2 className="text-sm font-medium text-(--color-ink-secondary)">Evidence</h2>
-          <span className="text-xs text-(--color-ink-muted)">{incident.attribution?.note}</span>
         </div>
-        {(incident.signals ?? [])
-          .slice()
-          .sort((a, b) => (attributionBySignal.get(String(b.signal_id))?.delta ?? 0) - (attributionBySignal.get(String(a.signal_id))?.delta ?? 0))
-          .map((s) => (
-            <SignalCard
-              key={s.signal_id}
-              signal={s}
-              attribution={attributionBySignal.get(String(s.signal_id))}
-              risk={risk}
-              selected={selectedId != null && ((s.evidence_event_ids ?? []).includes(selectedId) || selectedSignal?.signal_id === s.signal_id)}
-              onSelect={() => setSelectedId((s.evidence_event_ids ?? [])[0] ?? String(s.signal_id))}
-            />
-          ))}
-        {incident.attribution?.minimal_sufficient_set && (
-          <p className="border-t border-(--color-hairline) px-4 py-3 text-sm text-(--color-ink-secondary)">
-            {incident.attribution.minimal_sufficient_set.length} of these {incident.signals?.length ?? 0} signals are enough on their own to clear the threshold.
-          </p>
-        )}
-      </section>
 
-      <section className="rounded-lg border border-(--color-hairline) bg-(--color-surface-raised) p-4">
-        <h2 className="mb-3 text-sm font-medium text-(--color-ink-secondary)">Record a verdict</h2>
-        <VerdictForm incidentId={incident.incident_id!} userId={incident.user?.user_id ?? ""} closed={incident.status === "closed"} startedAt={startedAt} />
-      </section>
+        {incident.narrative?.summary && (
+          <div className="p-4">
+            <p className="font-narrative max-w-[68ch] text-lg leading-[1.55] text-(--color-ink)">{incident.narrative.summary}</p>
+          </div>
+        )}
+
+        <div className="p-4">
+          <h2 className="mb-4 text-sm font-medium text-(--color-ink-secondary)">The chain</h2>
+          <ChainSpine size="lg" activeStages={activeStages} events={eventPins} />
+          {windowStart && windowEnd && (
+            <p className="mt-2 text-xs text-(--color-ink-muted)">
+              {formatDate(windowStart)}, {formatTime(windowStart)}–{formatTime(windowEnd)} · {windowDurationMin?.toFixed(1)} min
+            </p>
+          )}
+        </div>
+
+        {campaign && (
+          <div className="p-4">
+            <div className="mb-4 flex items-baseline justify-between">
+              <h2 className="text-sm font-medium text-(--color-ink-secondary)">
+                Campaign {campaign.campaign_id} spans {Math.round((new Date(campaign.last_seen!).getTime() - new Date(campaign.first_seen!).getTime()) / 86400000)} days
+              </h2>
+              <span className="font-mono-tab text-sm text-(--color-ember-500)">campaign risk {campaign.campaign_risk?.toFixed(1)}</span>
+            </div>
+            <ChainSpine
+              size="campaign"
+              activeStages={[]}
+              campaignPoints={(campaign.stage_progression ?? []).map((p) => ({
+                date: p.date!,
+                stage: p.stage ?? 0,
+                risk: p.risk ?? 0,
+                headline: p.headline ?? "",
+                incidentId: p.incident_id!,
+              }))}
+            />
+            {campaign.narrative && <p className="font-narrative mt-4 max-w-[68ch] text-base leading-[1.55]">{campaign.narrative}</p>}
+          </div>
+        )}
+
+        {graph && (
+          <div className="p-4">
+            <h2 className="mb-2 text-sm font-medium text-(--color-ink-secondary)">Correlation graph</h2>
+            <CorrelationGraph nodes={graph.nodes ?? []} edges={graph.edges ?? []} selectedId={selectedId} onSelect={setSelectedId} overDense={graph.over_dense} />
+          </div>
+        )}
+
+        <div>
+          <div className="flex items-center justify-between px-4 py-3">
+            <h2 className="text-sm font-medium text-(--color-ink-secondary)">Evidence</h2>
+            <span className="text-xs text-(--color-ink-muted)">{incident.attribution?.note}</span>
+          </div>
+          <div className="divide-y divide-(--color-hairline) border-t border-(--color-hairline)">
+            {(incident.signals ?? [])
+              .slice()
+              .sort((a, b) => (attributionBySignal.get(String(b.signal_id))?.delta ?? 0) - (attributionBySignal.get(String(a.signal_id))?.delta ?? 0))
+              .map((s) => (
+                <SignalCard
+                  key={s.signal_id}
+                  signal={s}
+                  attribution={attributionBySignal.get(String(s.signal_id))}
+                  risk={risk}
+                  selected={selectedId != null && ((s.evidence_event_ids ?? []).includes(selectedId) || selectedSignal?.signal_id === s.signal_id)}
+                  onSelect={() => setSelectedId((s.evidence_event_ids ?? [])[0] ?? String(s.signal_id))}
+                />
+              ))}
+          </div>
+          {incident.attribution?.minimal_sufficient_set && (
+            <p className="border-t border-(--color-hairline) px-4 py-3 text-sm text-(--color-ink-secondary)">
+              {incident.attribution.minimal_sufficient_set.length} of these {incident.signals?.length ?? 0} signals are enough on their own to clear the threshold.
+            </p>
+          )}
+        </div>
+
+        <div className="p-4">
+          <h2 className="mb-3 text-sm font-medium text-(--color-ink-secondary)">Record a verdict</h2>
+          <VerdictForm incidentId={incident.incident_id!} userId={incident.user?.user_id ?? ""} closed={incident.status === "closed"} startedAt={startedAt} />
+        </div>
+      </div>
     </div>
   );
 }

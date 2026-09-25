@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useUsers } from "@/hooks/useUsers";
 import { emberForRisk } from "@/lib/design";
 import { ErrorState } from "@/components/shared/EmptyState";
+import { TableRowSkeleton } from "@/components/shared/Skeleton";
 
 export function UsersPage() {
   const [q, setQ] = useState("");
@@ -38,26 +39,27 @@ export function UsersPage() {
               </tr>
             </thead>
             <tbody>
-              {items.map((u) => (
-                <tr key={u.user_id} className="border-b border-(--color-hairline) last:border-b-0 hover:bg-(--color-surface)">
-                  <td className="px-4 py-2">
-                    <Link to={`/users/${u.user_id}`} className="font-medium hover:underline">
-                      {u.name}
-                    </Link>
-                    <span className="ml-2 font-mono-tab text-xs text-(--color-ink-muted)">{u.user_id}</span>
-                  </td>
-                  <td className="px-4 py-2 text-(--color-ink-secondary)">{u.role}</td>
-                  <td className="px-4 py-2 text-(--color-ink-secondary)">{u.department}</td>
-                  <td className="px-4 py-2 font-mono-tab" style={{ color: emberForRisk(u.current_risk ?? 0) }}>
-                    {(u.current_risk ?? 0).toFixed(1)}
-                  </td>
-                  <td className="px-4 py-2 text-(--color-ink-secondary)">{u.trend}</td>
-                  <td className="px-4 py-2 font-mono-tab">{u.open_incidents}</td>
-                </tr>
-              ))}
+              {isLoading && Array.from({ length: 6 }, (_, i) => <TableRowSkeleton key={i} cols={6} />)}
+              {!isLoading &&
+                items.map((u) => (
+                  <tr key={u.user_id} className="border-b border-(--color-hairline) last:border-b-0 hover:bg-(--color-surface)">
+                    <td className="px-4 py-2">
+                      <Link to={`/users/${u.user_id}`} className="font-medium hover:underline">
+                        {u.name}
+                      </Link>
+                      <span className="ml-2 font-mono-tab text-xs text-(--color-ink-muted)">{u.user_id}</span>
+                    </td>
+                    <td className="px-4 py-2 text-(--color-ink-secondary)">{u.role}</td>
+                    <td className="px-4 py-2 text-(--color-ink-secondary)">{u.department}</td>
+                    <td className="px-4 py-2 font-mono-tab" style={{ color: emberForRisk(u.current_risk ?? 0) }}>
+                      {(u.current_risk ?? 0).toFixed(1)}
+                    </td>
+                    <td className="px-4 py-2 text-(--color-ink-secondary)">{u.trend}</td>
+                    <td className="px-4 py-2 font-mono-tab">{u.open_incidents}</td>
+                  </tr>
+                ))}
             </tbody>
           </table>
-          {isLoading && <p className="px-4 py-3 text-sm text-(--color-ink-muted)">Loading…</p>}
         </div>
       )}
     </div>

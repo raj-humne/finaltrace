@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { STAGE_NAMES, STAGE_RAMP } from "@/lib/design";
+import { useId, useMemo } from "react";
+import { STAGE_NAMES, STAGE_RAMP, EMBER_STEPS } from "@/lib/design";
 import { formatTime, formatDate } from "@/lib/utils";
 
 export interface ChainSpineEventPin {
@@ -35,6 +35,8 @@ const STAGE_COUNT = STAGE_NAMES.length;
  * hollow where it did not.
  */
 export function ChainSpine({ size, activeStages, events = [], campaignPoints, onSelectCampaignPoint, className }: ChainSpineProps) {
+  const gradientId = useId();
+  const glowId = useId();
   const activeSet = useMemo(() => new Set(activeStages), [activeStages]);
   const maxActive = activeStages.length ? Math.max(...activeStages) : -1;
   const minActive = activeStages.length ? Math.min(...activeStages) : STAGE_COUNT;
@@ -51,6 +53,7 @@ export function ChainSpine({ size, activeStages, events = [], campaignPoints, on
   const step = (width - padX * 2) / (STAGE_COUNT - 1);
   const stageX = (i: number) => padX + step * i;
   const dotR = isSm ? 3 : 6;
+  const leadColor = maxActive >= 3 ? EMBER_STEPS[3] : STAGE_RAMP.dark;
 
   return (
     <div className={className}>
@@ -62,6 +65,19 @@ export function ChainSpine({ size, activeStages, events = [], campaignPoints, on
         aria-label={`Kill-chain progression through ${STAGE_NAMES.filter((_, i) => activeSet.has(i)).join(", ") || "no stages"}`}
         preserveAspectRatio={isSm ? "xMinYMid meet" : "none"}
       >
+        <defs>
+          <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor={STAGE_RAMP.light} />
+            <stop offset="100%" stopColor={leadColor} />
+          </linearGradient>
+          <filter id={glowId} x="-120%" y="-120%" width="340%" height="340%">
+            <feGaussianBlur stdDeviation={isSm ? 1.5 : 3} result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
         {!isSm &&
           STAGE_NAMES.map((name, i) => (
             <text
@@ -88,8 +104,8 @@ export function ChainSpine({ size, activeStages, events = [], campaignPoints, on
               y1={railY}
               x2={stageX(i + 1)}
               y2={railY}
-              stroke={advanced || traversed ? STAGE_RAMP.dark : "currentColor"}
-              strokeOpacity={advanced || traversed ? 0.85 : 0.28}
+              stroke={advanced || traversed ? `url(#${gradientId})` : "currentColor"}
+              strokeOpacity={advanced || traversed ? 0.95 : 0.28}
               strokeWidth={advanced ? (isSm ? 3 : 5) : 1.25}
               strokeLinecap="round"
             />
@@ -98,16 +114,18 @@ export function ChainSpine({ size, activeStages, events = [], campaignPoints, on
 
         {STAGE_NAMES.map((_, i) => {
           const active = activeSet.has(i);
+          const isLead = active && i === maxActive;
           return (
             <circle
               key={`dot-${i}`}
               cx={stageX(i)}
               cy={railY}
               r={active ? dotR : dotR * 0.6}
-              fill={active ? STAGE_RAMP.dark : "var(--color-surface)"}
-              stroke={active ? STAGE_RAMP.dark : "currentColor"}
+              fill={active ? (isLead ? leadColor : STAGE_RAMP.dark) : "var(--color-surface)"}
+              stroke={active ? (isLead ? leadColor : STAGE_RAMP.dark) : "currentColor"}
               strokeOpacity={active ? 1 : 0.4}
               strokeWidth={1.25}
+              filter={isLead ? `url(#${glowId})` : undefined}
             />
           );
         })}
@@ -134,6 +152,8 @@ export function ChainSpine({ size, activeStages, events = [], campaignPoints, on
 }
 
 function CampaignSpine({ points, onSelect, className }: { points: ChainSpineCampaignPoint[]; onSelect?: (id: string) => void; className?: string }) {
+  const gradientId = useId();
+  const glowId = useId();
   const width = 800;
   const height = 120;
   const padX = 32;
@@ -144,10 +164,25 @@ function CampaignSpine({ points, onSelect, className }: { points: ChainSpineCamp
   const x = (d: string) => padX + ((new Date(d).getTime() - t0) / span) * (width - padX * 2);
   const railY = height - 20;
   const yForStage = (stage: number) => railY - (stage / (STAGE_NAMES.length - 1)) * (railY - padTop);
+  const lastPoint = points[points.length - 1];
+  const leadColor = lastPoint.stage >= 3 ? EMBER_STEPS[3] : STAGE_RAMP.dark;
 
   return (
     <div className={className}>
       <svg viewBox={`0 0 ${width} ${height}`} width="100%" height={height} role="img" aria-label="Campaign kill-chain progression over time">
+        <defs>
+          <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor={STAGE_RAMP.light} />
+            <stop offset="100%" stopColor={leadColor} />
+          </linearGradient>
+          <filter id={glowId} x="-150%" y="-150%" width="400%" height="400%">
+            <feGaussianBlur stdDeviation={4} result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
         <line x1={padX} y1={railY} x2={width - padX} y2={railY} stroke="currentColor" strokeOpacity={0.25} strokeWidth={1} />
         {points.map((p, i) => {
           if (i === 0) return null;
@@ -159,24 +194,35 @@ function CampaignSpine({ points, onSelect, className }: { points: ChainSpineCamp
               y1={yForStage(prev.stage)}
               x2={x(p.date)}
               y2={yForStage(p.stage)}
-              stroke={STAGE_RAMP.dark}
-              strokeOpacity={0.8}
+              stroke={`url(#${gradientId})`}
+              strokeOpacity={0.9}
               strokeWidth={3}
               strokeLinecap="round"
             />
           );
         })}
-        {points.map((p) => (
-          <g key={p.incidentId} tabIndex={0} role="button" aria-label={`${formatDate(p.date)}: ${p.headline}, risk ${p.risk}`} onClick={() => onSelect?.(p.incidentId)} className="cursor-pointer outline-none">
-            <circle cx={x(p.date)} cy={yForStage(p.stage)} r={7} fill={STAGE_RAMP.dark} stroke="var(--color-surface)" strokeWidth={2} />
-            <text x={x(p.date)} y={yForStage(p.stage) - 12} textAnchor="middle" fontSize="10" className="fill-(--color-ink-secondary)" style={{ fontFamily: "var(--font-mono)" }}>
-              {formatDate(p.date)}
-            </text>
-            <text x={x(p.date)} y={railY + 16} textAnchor="middle" fontSize="10" className="fill-(--color-ink)">
-              {STAGE_NAMES[p.stage]}
-            </text>
-          </g>
-        ))}
+        {points.map((p) => {
+          const isLast = p.incidentId === lastPoint.incidentId;
+          return (
+            <g key={p.incidentId} tabIndex={0} role="button" aria-label={`${formatDate(p.date)}: ${p.headline}, risk ${p.risk}`} onClick={() => onSelect?.(p.incidentId)} className="cursor-pointer outline-none">
+              <circle
+                cx={x(p.date)}
+                cy={yForStage(p.stage)}
+                r={isLast ? 8 : 7}
+                fill={isLast ? leadColor : STAGE_RAMP.dark}
+                stroke="var(--color-surface)"
+                strokeWidth={2}
+                filter={isLast ? `url(#${glowId})` : undefined}
+              />
+              <text x={x(p.date)} y={yForStage(p.stage) - 14} textAnchor="middle" fontSize="10" className="fill-(--color-ink-secondary)" style={{ fontFamily: "var(--font-mono)" }}>
+                {formatDate(p.date)}
+              </text>
+              <text x={x(p.date)} y={railY + 16} textAnchor="middle" fontSize="10" className="fill-(--color-ink)">
+                {STAGE_NAMES[p.stage]}
+              </text>
+            </g>
+          );
+        })}
       </svg>
     </div>
   );

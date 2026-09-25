@@ -41,13 +41,16 @@ export function AppShell({ children }: { children: ReactNode }) {
       <header className="sticky top-0 z-20 border-b border-(--color-hairline) bg-(--color-page)/95 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-[1400px] items-center gap-6 px-4">
           <span className="text-sm font-semibold tracking-tight">SentinelTrace</span>
-          <nav className="flex items-center gap-4">
+          <nav className="flex h-full items-center gap-5">
             {NAV.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
-                  cn("text-sm text-(--color-ink-secondary) hover:text-(--color-ink)", isActive && "font-medium text-(--color-ink)")
+                  cn(
+                    "relative flex h-full items-center text-sm text-(--color-ink-secondary) transition-colors hover:text-(--color-ink)",
+                    isActive && "font-medium text-(--color-ink) after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-[#184f95] after:content-['']"
+                  )
                 }
               >
                 {item.label}

@@ -14,7 +14,12 @@ function Protected({ children }: { children: ReactNode }) {
   const location = useLocation();
 
   if (status === "loading") {
-    return <div className="flex min-h-screen items-center justify-center text-sm text-(--color-ink-muted)">Loading…</div>;
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-(--color-ember-400)" aria-hidden />
+        <span className="sr-only">Loading SentinelTrace…</span>
+      </div>
+    );
   }
   if (status === "anonymous") {
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;

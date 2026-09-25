@@ -3,6 +3,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useIncidents } from "@/hooks/useIncidents";
 import { IncidentRow } from "@/components/shared/IncidentRow";
 import { EmptyState, ErrorState } from "@/components/shared/EmptyState";
+import { IncidentRowSkeleton, Skeleton } from "@/components/shared/Skeleton";
 import { LANES, type TriageLane } from "@/lib/design";
 import { cn } from "@/lib/utils";
 
@@ -56,7 +57,7 @@ export function QueuePage() {
               {facets.lane?.AUTO_FLAG ?? 0} auto-flagged · {facets.lane?.ANALYST_REVIEW ?? 0} awaiting review · {facets.lane?.MONITOR ?? 0} monitored
             </>
           ) : (
-            "Loading counts…"
+            <Skeleton className="h-4 w-72" />
           )}
         </p>
       </div>
@@ -99,6 +100,13 @@ export function QueuePage() {
 
       <div className="rounded-lg border border-(--color-hairline) bg-(--color-surface-raised)">
         {isError && <ErrorState title="Could not load the triage queue." />}
+        {!isError && isLoading && (
+          <div>
+            {Array.from({ length: 8 }, (_, i) => (
+              <IncidentRowSkeleton key={i} />
+            ))}
+          </div>
+        )}
         {!isError && !isLoading && items.length === 0 && (
           <EmptyState title={`No open incidents in this window. ${data?.total ?? 0} user-days were scored and stayed below the alert threshold.`} />
         )}

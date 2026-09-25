@@ -1,7 +1,13 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "@/state/auth";
 import { useReviewIncident } from "@/hooks/useReviewIncident";
 import { cn } from "@/lib/utils";
+
+const VERDICT_TINT: Record<string, string> = {
+  confirmed_threat: "var(--color-status-auto-flag)",
+  benign: "var(--color-source-logon)",
+  inconclusive: "var(--color-ink-muted)",
+};
 
 const VERDICTS = [
   { value: "confirmed_threat", label: "Confirmed threat" },
@@ -26,6 +32,14 @@ export function VerdictForm({
   const [proposeSuppression, setProposeSuppression] = useState(false);
   const [ruleId, setRuleId] = useState("");
   const mutation = useReviewIncident(incidentId);
+  const [settled, setSettled] = useState(false);
+
+  useEffect(() => {
+    if (mutation.isSuccess) {
+      const t = setTimeout(() => setSettled(true), 200);
+      return () => clearTimeout(t);
+    }
+  }, [mutation.isSuccess]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -47,7 +61,18 @@ export function VerdictForm({
   }
 
   if (mutation.isSuccess) {
-    return <p className="text-sm text-(--color-ink-secondary)">Verdict saved.</p>;
+    const tint = (verdict && VERDICT_TINT[verdict]) ?? "var(--color-ink-muted)";
+    return (
+      <div
+        className="flex items-center gap-2.5 rounded-md py-1.5 pl-3 transition-colors duration-200"
+        style={{
+          borderLeft: `2px solid ${tint}`,
+          backgroundColor: settled ? "transparent" : `color-mix(in srgb, ${tint} 12%, transparent)`,
+        }}
+      >
+        <p className="text-sm text-(--color-ink-secondary)">Verdict saved.</p>
+      </div>
+    );
   }
 
   return (

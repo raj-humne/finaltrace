@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { STAGE_RAMP } from "@/lib/design";
 import type { components } from "@/lib/api/types.gen";
 
 type Signal = components["schemas"]["SignalDetailOut"];
@@ -33,13 +34,16 @@ export function SignalCard({
     <button
       onClick={onSelect}
       className={cn(
-        "w-full border-b border-(--color-hairline) px-4 py-3 text-left last:border-b-0",
+        "w-full px-4 py-3 text-left transition-colors duration-150",
         selected ? "bg-(--color-surface)" : "hover:bg-(--color-surface)/60"
       )}
     >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <span className="text-xs font-medium uppercase tracking-wide text-(--color-ink-muted)">{signal.category}</span>
+          <span className="inline-flex items-center gap-1.5 text-xs text-(--color-ink-muted)">
+            <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: STAGE_RAMP.dark }} aria-hidden />
+            {signal.category}
+          </span>
           <p className="text-sm">{signal.phrase}</p>
           {(observed != null || threshold != null) && (
             <p className="mt-0.5 font-mono-tab text-xs text-(--color-ink-muted)">
