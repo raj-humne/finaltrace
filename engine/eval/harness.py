@@ -383,7 +383,7 @@ def calibration(day_scores: pd.DataFrame, n_bins: int = CALIBRATION_BINS) -> dic
     bins = []
     ece = 0.0
     n = len(scored)
-    for lo, hi in zip(edges[:-1], edges[1:]):
+    for lo, hi in zip(edges[:-1], edges[1:], strict=True):
         mask = (scored["confidence"] >= lo) & (scored["confidence"] < hi if hi < 1
                                                else scored["confidence"] <= hi)
         chunk = scored[mask]

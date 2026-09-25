@@ -249,23 +249,9 @@ def test_recall_at_budget_no_positives_returns_none():
 
 
 # ============================================================== calibration
-def test_calibration_perfect_agreement_gives_zero_ece():
-    """Confidence exactly equals observed precision in every bin -> ECE == 0."""
-    day_scores = pd.DataFrame([
-        {"confidence": 0.9, "is_true_positive": True, "signal_count": 2},
-        {"confidence": 0.9, "is_true_positive": True, "signal_count": 2},
-        {"confidence": 0.9, "is_true_positive": False, "signal_count": 2},
-        {"confidence": 0.9, "is_true_positive": True, "signal_count": 2},
-        {"confidence": 0.9, "is_true_positive": True, "signal_count": 2},
-        {"confidence": 0.9, "is_true_positive": True, "signal_count": 2},
-        {"confidence": 0.9, "is_true_positive": True, "signal_count": 2},
-        {"confidence": 0.9, "is_true_positive": True, "signal_count": 2},
-        {"confidence": 0.9, "is_true_positive": True, "signal_count": 2},
-        {"confidence": 0.9, "is_true_positive": False, "signal_count": 2},
-        # 8/10 = 0.8 observed vs 0.9 confidence bin midpoint - use a case that
-        # matches exactly instead:
-    ])
-    # Simpler exact case: bin [0.0, 0.1) at confidence 0.05, 0/1 positive.
+def test_calibration_computes_exact_ece_for_one_bin():
+    """Bin [0.0, 0.1) at confidence 0.05, 0/2 positive -> observed precision
+    0.0, exactly 0.05 away from the bin's mean confidence -> ECE == 0.05."""
     exact = pd.DataFrame([
         {"confidence": 0.05, "is_true_positive": False, "signal_count": 1},
         {"confidence": 0.05, "is_true_positive": False, "signal_count": 1},
