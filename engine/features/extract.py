@@ -532,7 +532,7 @@ def build_features(events: pd.DataFrame, org: pd.DataFrame,
                          ("mass_email_flag", False)]:
         if col not in feats.columns:
             feats[col] = default
-        feats[col] = feats[col].fillna(False).infer_objects(copy=False).astype(bool)
+        feats[col] = np.where(feats[col].isna(), False, feats[col]).astype(bool)
 
     if "days_since_last_usb" not in feats.columns:
         feats["days_since_last_usb"] = np.nan

@@ -40,6 +40,7 @@ class Incident:
     breakdown: ScoreBreakdown
     confidence_terms: ConfidenceTerms
     campaign_id: str | None = None
+    triage_lane: str | None = None
 
 
 @dataclass
