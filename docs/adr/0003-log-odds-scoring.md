@@ -32,7 +32,7 @@ risk = 100 · σ(L / τ)                    τ = 1.8
 
 **Weighted sum with clipping.** The three failures above.
 
-**Train a supervised classifier on ground truth.** With ~70 positives and a 0.19% base rate, it would overfit CERT's scenario scripts, and it would need labels a real deployment does not have. It also destroys the explanation: coefficients are not clauses.
+**Train a supervised classifier on ground truth.** With 70 positives and a 0.29% base rate (`docs/07-EVALUATION.md` section 1.2), it would overfit CERT's scenario scripts, and it would need labels a real deployment does not have. It also destroys the explanation: coefficients are not clauses.
 
 **Bayesian network over signals.** Principled, and it would model dependence properly rather than approximating it with a decay constant. Rejected for v1 on build cost and on explainability — a network's conditional structure is harder for an analyst to read than "this added 18.4 points".
 

@@ -16,18 +16,26 @@ The r4.2 release ships an `answers/` directory identifying the malicious users, 
 | **User-day** | This user acted maliciously on this date | PR curves, threshold sweeps |
 | **User** | This person is a malicious insider | The metric that actually matters operationally |
 
-### 1.2 Dataset shape (fill from the local copy — OQ-1)
+### 1.2 Dataset shape — RESOLVED (OQ-1)
 
-| Quantity | Approximate | Confirm by |
-|---|---|---|
-| Users | ~1,000 | `len(LDAP union)` |
-| Period | ~17 months (Jan 2010 – May 2011) | `min/max(date)` |
-| Events | ~32M across five logs | Row counts per file |
-| Malicious insiders | ~70, across 3 scenarios | `answers/` |
-| Malicious user-days | **compute — do not assume** | Join answers to dates |
-| Total user-days with activity | **compute** | `groupby(user, date)` |
+Computed from the real CMU CERT r4.2 corpus by `engine/ingest/ground_truth.py`,
+written to `data/artifacts/dataset_profile.json`:
 
-The harness writes these to `eval/dataset_profile.json` on the first run, and every rate in this document is recomputed from that file rather than hard-coded. **No number in a slide should be typed by hand.**
+| Quantity | Value |
+|---|---|
+| Users | 1,000 |
+| Period | 2010-01-02 → 2011-05-17 (501 calendar days, 357 business days) |
+| Events | 32,770,222 across five logs (0 rejected, 0 duplicates) |
+| Malicious insiders | 70 — 30 scenario 1, 30 scenario 2, 10 scenario 3 |
+| Total user-days with activity | 330,452 |
+| Malicious user-days | 966 |
+| **Base rate** | **0.2923%** |
+
+This is higher than the ~0.19% used as an illustrative placeholder in earlier
+drafts of this document (the arithmetic in section 2 below is now the real
+figure, not an estimate) — every rate past this point is recomputed from
+`dataset_profile.json` rather than hard-coded. **No number in a slide should
+be typed by hand.**
 
 ### 1.3 The three scenarios
 
@@ -43,40 +51,42 @@ The harness writes these to `eval/dataset_profile.json` on the first run, and ev
 
 ## 2. Why "85% precision" is the wrong target
 
-Work the arithmetic with round numbers; substitute the real profile when it exists.
+The real numbers, from `data/artifacts/dataset_profile.json` (section 1.2):
 
 ```
-users                         1,000
-active user-days            ~370,000     (weekday-weighted over 17 months)
-malicious user-days             ~700     (70 insiders × ~10 active days)
+users                          1,000
+active user-days             330,452
+malicious user-days              966
 
-base rate = 700 / 370,000 = 0.19%
+base rate = 966 / 330,452 = 0.2923%
 ```
 
-Now suppose a SOC can absorb **25 alerts per day** — generous for a 1,000-person organisation.
+Now suppose a SOC can absorb **25 alerts per day** — generous for a 1,000-person organisation, over the corpus's 357 business days.
 
 ```
-alerts emitted   = 25 × 370 working days = 9,250
-true positives   ≤ 700                   (cannot exceed the positives that exist)
-precision        ≤ 700 / 9,250 = 7.6%
+alerts emitted   = 25 x 357 business days = 8,925
+true positives   <= 966                    (cannot exceed the positives that exist)
+precision        <= 966 / 8,925 = 10.8%
 ```
 
-**A perfect detector cannot exceed 7.6% precision at that alert volume.** Any claim of 85% user-day precision implies emitting at most ~820 alerts in 17 months — about two per day — *and* being right almost every time. That is not a detection system; it is a claim that the problem is easy.
+**A perfect detector cannot exceed ~11% precision at that alert volume.** Any claim of 85% user-day precision implies emitting at most 1,136 alerts across the whole 357-business-day period — about 3.2 per day — *and* being right almost every time. That is not a detection system; it is a claim that the problem is easy. (The real base rate turned out to be higher than early drafts of this document estimated, which *raises* the achievable precision ceiling slightly — 10.8% instead of an earlier illustrative 7.6% — but the conclusion is unchanged: 85% remains far out of reach at any workable alert volume.)
 
 A judge who works in security will do this arithmetic in their head. Leading with the honest reframing is a stronger position than being caught by it.
 
 ### 2.1 The reframing
 
-The deliverable is not a flagged user-day. It is an **incident**, and ultimately **a person to investigate**. Change the unit and the numbers become both honest and good:
+The deliverable is not a flagged user-day. It is an **incident**, and ultimately **a person to investigate**. Change the unit and the numbers become both honest and reportable:
 
 ```
-incidents emitted over 17 months        ~120      (≈ 0.32/day)
+incidents emitted over the corpus       ~120      (illustrative — ≈ 0.32/day)
 incidents attributable to an insider     ~62      → incident precision 0.52
 distinct insiders caught                 ~62/70   → insider recall 0.89
 analyst load                            0.32 incidents/day
 ```
 
-Same detector. Same data. A reportable result instead of an impossible one — because the unit of evaluation now matches the unit of work.
+**These are illustrative, not measured** — `engine/eval/report.py` has not yet been run against the real corpus (as of this writing, `data/artifacts/eval_report.json` does not exist). They exist to show the *shape* a defensible result takes, not to be quoted as one. Once the real run completes, this block is replaced with the actual numbers from `eval_report.json`, and `summary_paragraph()` (`engine/eval/harness.py`) generates the equivalent sentence directly from that file — never hand-typed.
+
+Same unit, same argument either way: a reportable result instead of an impossible one, because the unit of evaluation now matches the unit of work.
 
 ---
 
@@ -114,7 +124,7 @@ Evidence precision has no target because context events are *intentionally* incl
 | **Precision@k** for k ∈ {5, 10, 25, 50}/day | Directly answers "if we can work k alerts a day, what do we get" | Curve, reported |
 | **Recall@25/day** | Recall at a realistic budget | **≥ 0.55** |
 
-**ROC-AUC is not reported.** At a 0.19% base rate it reads ~0.95 for a detector of no practical value, because the false-positive rate denominator is dominated by an enormous true-negative count. Including it would be misleading, and excluding it deliberately — and saying why — is a credibility signal.
+**ROC-AUC is not reported.** At a 0.29% base rate it reads ~0.95 for a detector of no practical value, because the false-positive rate denominator is dominated by an enormous true-negative count. Including it would be misleading, and excluding it deliberately — and saying why — is a credibility signal.
 
 ### 3.4 Confidence calibration
 
@@ -257,10 +267,18 @@ State these before a judge finds them. Every one of them is a stronger position 
 
 ## 10. What we claim, and how we say it
 
-The defensible summary, in the form it should appear on a slide and be spoken aloud:
+> ⚠ **The paragraph below is a TEMPLATE with placeholder numbers (89%, 78%, 11
+> points, 80%) — it has not been generated from a real run.** `eval_report.json`
+> does not yet exist (section 8). **Do not read these numbers aloud in a demo
+> or put them on a slide.** Once `engine/eval/report.py` has run against the
+> real corpus, `summary_paragraph()` in `engine/eval/harness.py` generates the
+> real version of this exact sentence from `eval_report.json` — use that
+> output, verbatim, instead of this template.
 
-> Against CMU CERT r4.2, SentinelTrace identified **89% of labelled insiders before their final malicious act**, at **0.32 incidents per day per 1,000 users** — roughly one item for an analyst every three days. Of incidents in the auto-flag lane, **78% traced to a real insider**. Correlation and campaign linking account for **11 points of that precision**; the ablation table isolates it. On the scenario held out entirely during rule development, recall was **80%**.
+The shape the defensible summary takes, once real:
+
+> Against CMU CERT r4.2, SentinelTrace identified **[recall]% of labelled insiders before their final malicious act**, at **[incidents_per_day_per_1k_users] incidents per day per 1,000 users**. Of incidents in the auto-flag lane, **[auto_flag_precision]% traced to a real insider**. Correlation and campaign linking account for **[X] points of that precision**; the ablation table isolates it. On the scenario held out entirely during rule development, recall was **[scenario_3_recall]%**.
 >
-> We do not report ROC-AUC: at a 0.19% base rate it flatters every detector. We do not claim 85% user-day precision, because at any workable alert volume that number is not achievable by any system, including a perfect one.
+> We do not report ROC-AUC: at a 0.29% base rate (section 1.2) it flatters every detector. We do not claim 85% user-day precision, because at any workable alert volume that number is not achievable by any system, including a perfect one (section 2).
 
-That last paragraph is the one that wins the technical Q&A.
+That last paragraph — the ROC-AUC and 85%-precision refusals — is the one that wins the technical Q&A, and it is the one part of this section that is already true regardless of what the real run produces.

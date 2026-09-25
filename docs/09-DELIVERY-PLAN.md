@@ -94,6 +94,14 @@ Decided in advance, in cut order, so that a decision at hour 30 is a lookup rath
 
 Rehearsed, timed, and on precomputed data. Live pipeline runs are for the Q&A, not the demo.
 
+> ⚠ **Every specific number below (89%, eleven points, 78%, 0.19% base rate,
+> etc.) is a placeholder, not a measured result** — `data/artifacts/eval_report.json`
+> did not exist when this script was written. Before rehearsing, replace every
+> bracketed figure with the real output of `engine/eval/report.py`
+> (`docs/07-EVALUATION.md` section 8 and 10). Rehearsing placeholder numbers
+> and then speaking them on stage is the one failure mode this whole
+> evaluation methodology exists to prevent — do not let it happen here.
+
 **0:00–0:35 — The problem, concretely**
 Open on the queue. Do not explain the product yet.
 
@@ -122,7 +130,7 @@ Scroll to attribution.
 **4:30–5:15 — Validation**
 Show the evaluation report and the ablation table.
 
-> "Against CERT ground truth: 89% of labelled insiders caught before their final malicious act, at a third of an incident per day per thousand users. The ablation table isolates the correlation layer — it's worth eleven points of precision on its own. We don't report ROC-AUC, because at a 0.19% base rate it flatters everything."
+> "Against CERT ground truth: [recall]% of labelled insiders caught before their final malicious act, at [incidents_per_day_per_1k_users] incidents per thousand users per day. The ablation table isolates the correlation layer — it's worth [X] points of precision on its own. We don't report ROC-AUC, because at a 0.29% base rate it flatters everything." *(fill every bracket from `eval_report.json`/`ablation_report.json` before rehearsing — see the warning above)*
 
 **5:15–6:00 — Scale and close**
 > "Right now this is batch over local files. The detection function takes a window of events and returns signals — it never queries a database and never sees the whole dataset. Moving to Kafka changes how windows arrive, not what happens inside them. A new log source is a YAML mapping file, and the system tells you up front which rules it can and can't support on your data.
@@ -135,11 +143,17 @@ Show the evaluation report and the ablation table.
 
 The questions that actually get asked, with answers that hold.
 
+> ⚠ Same caveat as section 5: any specific precision/recall/volume figure
+> below is a placeholder until `eval_report.json` exists. The *reasoning* in
+> each answer (why ROC-AUC is excluded, why 85% is impossible, how weights
+> are checked) is already true regardless of the real numbers — only the
+> bracketed figures need filling in.
+
 **"What's your false positive rate?"**
-> At incident level, roughly half of what we emit traces to a labelled insider — about 0.32 incidents per day per thousand users. We deliberately do not quote a user-day precision figure: at a 0.19% base rate, any workable alert volume caps precision in the single digits, so an 85% claim would be arithmetically impossible. `07-EVALUATION` section 2 has the calculation.
+> At incident level, [incident_precision]% of what we emit traces to a labelled insider — about [incidents_per_day_per_1k_users] incidents per day per thousand users. We deliberately do not quote a user-day precision figure: at a 0.29% base rate, any workable alert volume caps precision in the low double digits at best, so an 85% claim would be arithmetically impossible. `07-EVALUATION` section 2 has the calculation.
 
 **"Isn't this just an anomaly detector with extra steps?"**
-> An anomaly detector gives you a score. Our ablation table shows what the extra steps buy: the correlation layer is worth eleven points of precision at constant recall, and the ML component is capped at a contribution smaller than a single decisive rule — it can support a case, never carry one. Also, an anomaly detector cannot tell you *why*, and that's the difference between a score and an investigation.
+> An anomaly detector gives you a score. Our ablation table shows what the extra steps buy: the correlation layer is worth [X] points of precision at roughly constant recall, and the ML component is capped at a contribution smaller than a single decisive rule — it can support a case, never carry one. Also, an anomaly detector cannot tell you *why*, and that's the difference between a score and an investigation.
 
 **"How did you pick your weights?"**
 > Analyst judgement for the initial values, then measurement. Weights are log-odds evidence points, so each one makes a falsifiable claim — "this signal multiplies the odds by e^w". The harness computes the observed log-odds per rule against ground truth and reports the drift. A rule whose configured weight doesn't match its measured evidence shows up as a number in a column.

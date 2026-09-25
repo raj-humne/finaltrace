@@ -269,17 +269,21 @@ The `answers/` directory is the ground truth used by the (not-yet-built)
 evaluation harness to measure real detection performance — which users were
 malicious, on which dates, in which scenario.
 
-**Important honesty note baked into the evaluation design:** at this dataset's
-real base rate (malicious user-days are roughly 0.1–0.5% of all user-days), a
+**Important honesty note baked into the evaluation design:** the dataset's real
+base rate, now measured from the real corpus (`data/artifacts/dataset_profile.json`),
+is **0.2923%** — 966 malicious user-days out of 330,452 total. At that rate, a
 *perfect* detector working a realistic daily alert budget is mathematically
-capped at single-digit precision if measured at the day level. The original
-placeholder success metrics in the pitch deck ("85% precision, 75% recall") are
-not achievable at that granularity by any system, including a perfect one — the
-evaluation doc (`docs/07-EVALUATION.md`) works the exact arithmetic and
+capped at roughly 11% precision if measured at the day level (worked exactly in
+`docs/07-EVALUATION.md` section 2). The original placeholder success metrics in
+the pitch deck ("85% precision, 75% recall") are not achievable at that
+granularity by any system, including a perfect one — the evaluation doc
 reframes the real target as **incident-level and insider-level** metrics
-instead (e.g. "89% of insiders caught before their final malicious act, at 0.3
-incidents/day/1000 users"). This reframing is a deliberate, documented choice,
-not an oversight.
+instead. The specific figures quoted in that doc's section 10 (e.g. "89% of
+insiders caught... at 0.3 incidents/day/1000 users") are an illustrative
+template, not a measured result — `engine/eval/report.py` has not yet been run
+against the real corpus as of this writing. This reframing of *which unit to
+measure* is a deliberate, documented choice; the specific numbers that will
+eventually fill the template are not decided yet.
 
 ### 6.2 The synthetic generator (`tools/generate_synthetic.py`)
 
@@ -315,17 +319,29 @@ Event(
 
 ## 7. What's actually built right now (verified, not aspirational)
 
-**Engine (`engine/`) — complete, all modules present, 119/119 tests passing:**
-- `ingest/loader.py` — vectorised (not row-by-row) parsing of all 5 CERT sources
-  plus LDAP org snapshots with departure-date inference. Measured at ~57,000
-  rows/second on the synthetic set, projecting to roughly 9 minutes for the real
-  32-million-row corpus — inside the 15-minute budget.
-- `ingest/ground_truth.py` — parses CERT's `answers/` files into a ground-truth
-  table (just added, not yet committed).
+**Engine (`engine/`) — complete, all modules present, 164/164 tests passing
+tree-wide:**
+- `ingest/loader.py` — vectorised (not row-by-row) parsing of all 5 CERT
+  sources plus LDAP org snapshots with departure-date inference. Verified
+  against the **real** corpus, not just the synthetic set: 32,770,222 events,
+  0 rejected, 0 duplicates, inside both the 15-minute and 4 GB budgets (see
+  `data/artifacts/dataset_profile.json`). Two real-data bugs were found and
+  fixed by actually running it against the real files rather than by
+  inspection: real CERT's `file.csv` has no `to_removable_media` column at
+  all (every row already implies removable media, per CERT's own
+  documentation — the loader was silently defaulting this to `False` and
+  permanently disabling the `exfil.file_copy_to_usb` rule), and a dtype
+  upcasting issue that would have exhausted the memory budget on the full
+  concatenated frame.
+- `ingest/ground_truth.py` — parses CERT's real, non-standard, per-scenario
+  `answers/` format (verified against the actual files, not the documented
+  schema, since the two differ). Confirmed: 70 insiders, 30/30/10 across the
+  three scenarios, exactly matching CERT's documented shape.
 - `features/extract.py` — ~56 features per (user, date): timing, session
-  pairing, USB-session file-copy counts, burst detection, domain categorisation,
-  email fan-out, and the cross-source gap features (logon→USB, USB→file,
-  file→upload) that a single-log-source tool structurally cannot compute.
+  pairing, USB-session file-copy counts, burst detection, domain
+  categorisation, email fan-out, and the cross-source gap features
+  (logon→USB, USB→file, file→upload) that a single-log-source tool
+  structurally cannot compute.
 - `features/baseline.py` — robust median/MAD self-baseline and peer-cohort
   baseline.
 - `detect/rules.py` — evaluates the 27-rule YAML catalogue.
@@ -340,6 +356,30 @@ Event(
   validation check, not just a convention.
 - `run.py` — CLI entry point; runs the full pipeline to Parquet, or prints one
   user-day's full score breakdown.
+- **`eval/harness.py`, `eval/ablate.py`, `eval/report.py`** — the full
+  evaluation methodology from `docs/07-EVALUATION.md`: insider recall
+  (overall and pre-exfiltration — caught before the data actually left, the
+  stricter and more valuable claim), incident/auto-flag precision, PR-AUC,
+  precision@k, ECE calibration, user-level bootstrap confidence intervals,
+  per-rule weight-drift diagnostics, and a 7-row ablation study built from
+  real pipeline runs (never simulated scoring). Enforces a hard, unbypassable
+  guard: it refuses to emit a report from anything but real CERT data — the
+  synthetic generator is a dev/test fixture only, never a source of a
+  reported number. Deliberately does not report ROC-AUC, and states why.
+
+  Along the way, this surfaced two real bugs in the metric math itself (not
+  just missing features): a PR-AUC calculation that understated a perfect
+  ranking as 0.67 instead of 1.0 (the trapezoidal integral wasn't anchored at
+  recall=0), and a day-level scoring path that hard-coded risk=0 for any day
+  with zero rule signals — silently discarding the anomaly detector's
+  contribution on ML-only days. Both fixed and covered by regression tests.
+
+  **Known, explicitly documented limitation:** campaign linking
+  (`link_campaigns`) currently computes a `Campaign.peak_risk` but does not
+  feed back into any individual incident's risk, confidence, or triage lane —
+  so under the current engine, linking incidents into a campaign has *no
+  measurable effect* on which days get flagged. The ablation study reports
+  this plainly rather than claiming an improvement that isn't real yet.
 
 **API (`api/`) — complete:**
 - FastAPI app with routers for `/health`, `/auth`, `/ingest`, `/users`,
@@ -354,6 +394,12 @@ Event(
 - SQLAlchemy models for every entity (users, sessions, events, features,
   signals, incidents, campaigns, narratives, attributions, reviews,
   suppressions, audit log) with Alembic migrations.
+- `/eval/report` correctly proxies `engine/eval/report.py`'s output file and
+  honestly 404s until that file exists — it does not fabricate a placeholder.
+  `/detection/health` and `/rules/{id}/stats` are a deliberately separate,
+  legitimate concern: live, analyst-feedback-driven metrics computed from the
+  operational database, distinct from the offline ground-truth evaluation
+  `/eval/report` serves.
 
 **Frontend (`web/`) — substantial, built against the documented API contract:**
 - Login page with real session-cookie auth.
@@ -368,31 +414,52 @@ Event(
   sentence), `RiskTrendChart` (with a shaded peer-cohort band), `CalibrationPlot`,
   `WorkingWindowBar`, `CommandPalette`.
 - API types are generated, never hand-written, from the live OpenAPI schema.
+- TypeScript compiles clean (zero `tsc` errors). Two real React correctness
+  issues are still open, found by `oxlint` and not yet fixed: `IncidentPage.tsx`
+  calls `Date.now()` and reads a ref during render (an impure render), and
+  `CommandPalette.tsx`/`KillChainHero.tsx` call `setState` synchronously
+  inside a `useEffect` (can cascade renders).
 
-**Data — real CERT r4.2 downloaded and extracted** (`data/raw/r4.2/`, full 5
-files + LDAP), plus `answers/` (ground truth) extracted. A partial pipeline run
-exists covering a 7-month slice (Jan–Jul 2010) in `data/artifacts/` — this looks
-like a smoke test on a data slice, not yet the full 17-month corpus.
+**Data — real CERT r4.2, fully ingested and verified.** `data/raw/r4.2/` (the
+complete corpus, all 5 logs + LDAP, ~16 GB) and `data/raw/answers/` (ground
+truth), both extracted from the genuine CMU KiltHub release. The full-corpus
+ingest has been run and measured end to end: 32,770,222 events, 0 rejected,
+0 duplicates, 14.4 minutes wall-clock (measured across temporally chunked
+sub-runs to fit this development machine's 8.4 GB RAM — documented explicitly
+as such in the output, and likely a slight overstatement of a true single-pass
+number), 2.54 GB peak memory. Both inside the NFR-1/NFR-4 budgets. Real
+dataset profile, computed and written to `data/artifacts/dataset_profile.json`:
+1,000 users, 330,452 active user-days, 70 insiders (30/30/10 by scenario),
+966 malicious user-days, **base rate 0.2923%**.
 
-## 8. What's NOT built yet
+## 8. What's NOT built yet, or not yet confirmed
 
-- **`engine/eval/`** — the evaluation harness is still an empty directory. This
-  is the component that runs the metric suite from `docs/07-EVALUATION.md`
-  against real ground truth (insider recall, incident precision, PR-AUC,
-  calibration error, the per-rule weight-drift table, and the 7-row ablation
-  study showing what correlation and campaign-linking each actually buy). This
-  is the single most important remaining piece for defending the project's
-  claims with real numbers instead of a hand-typed slide.
-- A **full-corpus pipeline run** — the 7-month partial run needs to be re-run
-  (or extended) across the complete 17-month dataset before any headline number
-  is trustworthy.
-- Two files are locally modified/untracked and not yet committed:
-  `engine/ingest/loader.py` (a real bug fix — sparse per-source boolean/numeric
-  columns were upcasting to Python `object` dtype on concatenation across the
-  full corpus, which is what would have exhausted the 4 GB memory budget) and
-  `engine/ingest/ground_truth.py` (new).
-- Docker Compose packaging, and a recorded demo fallback video, per the delivery
-  plan — not started.
+- **A confirmed real-data detection pass.** The engine (`features/`,
+  `detect/`, `correlate/`, `explain/`, `route/`) was originally built and
+  tested only against the synthetic fixture. Real-data verification is
+  in progress: a real-data bug was found and fixed (`extract.py` computed
+  `distinct_file_count` from a column the loader never actually emitted —
+  fixed), and a second, more serious one was found and fixed (converting
+  `user_id`/`pc_id` to pandas `category` dtype to fix the ingest memory issue
+  had the side effect of making every downstream `.groupby()` call across six
+  files enumerate the full category cross-product instead of just the
+  combinations actually present in the data — up to ~1000 users × ~1100 PCs
+  of mostly-empty groups for what should have been a few hundred real
+  combinations; fixed by adding `observed=True` to all affected calls). As of
+  this writing, the retry after that second fix has not yet been confirmed to
+  complete, and the specific check that matters most — *does the right rule
+  fire on a real labelled insider's real malicious day* — has not yet been
+  shown for any of the three scenarios.
+- **`data/artifacts/real_run_report.json`** — the artifact that will record
+  that confirmation once it exists. Does not exist yet.
+- **`data/artifacts/eval_report.json` / `ablation_report.json`** — the actual
+  evaluation harness has never been run against the real corpus. Every
+  specific number in `docs/07-EVALUATION.md` section 10 and
+  `docs/09-DELIVERY-PLAN.md` sections 5–6 is an explicitly-marked placeholder
+  template, not a result. This is the single most important remaining step:
+  running `python -m engine.eval.report` for real.
+- Docker Compose packaging, and a recorded demo fallback video, per the
+  delivery plan — not started.
 
 ## 9. The specification documents (all complete, in `docs/`)
 
@@ -419,6 +486,12 @@ reasoning behind the biggest design decisions.
 2. Read `docs/04-DETECTION-ENGINE.md` in full — it's the actual core logic.
 3. Read this file's §4 (the pipeline) and §7/§8 (what exists / what doesn't).
 4. Run `python -m pytest -q` to confirm the current state is still green before
-   changing anything.
-5. The one thing to build next that matters most: `engine/eval/harness.py`,
-   against the real ground truth in `data/raw/answers/`.
+   changing anything (note: `tests/test_eval_ablate.py` alone takes ~3–4
+   minutes, since each test runs several real pipeline stages).
+5. Check `data/artifacts/` for what's actually been produced: as of this
+   writing, `dataset_profile.json` exists (real numbers) but
+   `real_run_report.json` and `eval_report.json` do not yet. The one thing
+   that matters most right now is confirming detection actually works
+   correctly on real data, then running `python -m engine.eval.report` for
+   real — everything needed to do both already exists and is tested; it just
+   hasn't been run and confirmed against the real corpus yet.
