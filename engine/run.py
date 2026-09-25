@@ -37,6 +37,17 @@ DEFAULT_RAW_DIR = REPO_ROOT / "data" / "raw"
 DEFAULT_ARTIFACTS_DIR = REPO_ROOT / "data" / "artifacts"
 
 
+def _peak_rss_mb() -> float | None:
+    """Peak resident set size in MB so far, for the diagnostic checkpoints
+    below - Unix only (Kaggle/Linux), silently unavailable on Windows."""
+    try:
+        import resource
+        ru = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        return ru / 1024  # ru_maxrss is KB on Linux
+    except ImportError:
+        return None
+
+
 class Pipeline:
     """Holds every stage's output. One object per run, for the CLI and for
     tests that want to inspect an intermediate stage directly."""
@@ -53,16 +64,27 @@ class Pipeline:
         self.ingest_report: IngestReport | None = None
 
     def run(self, raw_dir: Path) -> "Pipeline":
+        def _checkpoint(stage: str) -> None:
+            rss = _peak_rss_mb()
+            if rss is not None:
+                print(f"[checkpoint] after {stage}: peak RSS {rss:,.0f} MB", flush=True)
+
         self.events, self.ingest_report = load_events(raw_dir, self.cfg)
         self.org = load_org(raw_dir)
+        _checkpoint("load_events + load_org")
 
         feats = build_features(self.events, self.org, self.cfg)
+        _checkpoint("build_features")
         feats = add_baselines(feats, self.cfg)
+        _checkpoint("add_baselines")
         feats = score_anomaly(feats, self.cfg)
+        _checkpoint("score_anomaly")
         self.features = feats
 
         self.signals_by_day = detect_signals(self.features, self.events, self.cfg)
+        _checkpoint("detect_signals")
         self.graph = build_graph(self.events, self.signals_by_day, self.cfg)
+        _checkpoint("build_graph")
 
         anomaly_by_ud: dict = {}
         completeness_by_ud: dict = {}
@@ -75,10 +97,13 @@ class Pipeline:
 
         self.incidents = build_incidents(self.events, self.graph, anomaly_by_ud,
                                          completeness_by_ud, maturity_by_ud, self.cfg)
+        _checkpoint("build_incidents")
         self.campaigns = link_campaigns(self.incidents, self.cfg)
+        _checkpoint("link_campaigns")
 
         for inc in self.incidents:
             inc.triage_lane = route(inc.risk, inc.confidence, self.cfg).lane
+        _checkpoint("route")
         return self
 
     def feature_row(self, user_id: str, date) -> dict | None:
