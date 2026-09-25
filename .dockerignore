@@ -1,0 +1,18 @@
+# Without this, `docker build` sends the whole repo as build context -
+# including data/raw/ (the real CERT corpus, ~16GB) - to the Docker daemon on
+# every build. data/ is mounted as a volume at run time (docker-compose.yml),
+# never copied into an image layer.
+data/
+.git/
+.pytest_cache/
+__pycache__/
+*.pyc
+.venv/
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
+.claude/
+
+# web/ has its own .dockerignore for its own build context (node_modules,
+# dist, etc.) - not duplicated here.

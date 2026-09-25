@@ -80,10 +80,32 @@ sentineltrace/
 └── docker-compose.yml
 ```
 
-## Quick start (once built)
+## Quick start
 
 ```bash
 docker compose up --build
 ```
 
-API → `http://localhost:8000/docs` · Dashboard → `http://localhost:5173`
+Brings up `db` (Postgres), `api`, and `web`. Dashboard → `http://localhost:8080`
+· API docs → `http://localhost:8000/docs`. `web` proxies `/api` to `api` through
+nginx, so the browser only ever talks to one origin.
+
+There are no default credentials anywhere in this repo or image — create the
+first account once the containers are up:
+
+```bash
+docker compose exec api python -m api.cli create-user \
+  --username you --display-name "Your Name" --role detection_engineer
+```
+
+To (re-)run the real detection pipeline and evaluation report against
+`./data/raw` (not part of the default `up` — this is a deliberate, separate
+action, since a full run against the real corpus takes minutes):
+
+```bash
+docker compose --profile pipeline run --build runner
+```
+
+For a laptop without Docker: `SENTINEL_DB=sqlite:///./data/demo.db` in the
+environment drops Postgres entirely and `uvicorn api.main:app --reload` plus
+`npm run dev` (in `web/`) run everything locally instead.

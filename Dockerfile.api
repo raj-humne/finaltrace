@@ -1,0 +1,35 @@
+# SentinelTrace API. Also used, unmodified, for the one-shot `runner` service
+# (docker-compose.yml's `pipeline` profile) - same dependencies, same image,
+# different command, so there is no second dependency set to keep in sync
+# with engine/'s actual requirements.
+FROM python:3.11-slim AS base
+
+# libgomp1: scikit-learn's OpenMP-parallelised IsolationForest needs it at
+# runtime on slim images; it is not pulled in by pip.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /srv
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY config/ ./config/
+COPY engine/ ./engine/
+COPY api/ ./api/
+COPY alembic/ ./alembic/
+COPY alembic.ini .
+COPY tools/ ./tools/
+
+# data/ is a volume mount at run time (docker-compose.yml) - never baked into
+# the image. The real CERT corpus is ~16GB and does not belong in an image
+# layer, and the demo/db files must persist across container recreation.
+RUN mkdir -p data/raw data/artifacts
+
+EXPOSE 8000
+
+# Default command is the API; the `runner` service in docker-compose.yml
+# overrides `command` to run the engine pipeline instead. Migrations run
+# before serving so a fresh volume is never queried against a missing schema.
+CMD ["sh", "-c", "alembic upgrade head && uvicorn api.main:app --host 0.0.0.0 --port 8000"]
