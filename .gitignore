@@ -7,3 +7,6 @@ data/artifacts/*
 !data/artifacts/.gitkeep
 .venv/
 *.db
+*.db-shm
+*.db-wal
+*.db-journal
