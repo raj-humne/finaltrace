@@ -84,7 +84,16 @@ def build_incidents(
     completeness_by_user_date: dict[tuple[str, date_type], float],
     maturity_by_user_date: dict[tuple[str, date_type], float],
     cfg: Config,
+    disable_correlation_bonus: bool = False,
 ) -> list[Incident]:
+    """`disable_correlation_bonus` is additive and defaults to False, so every
+    existing caller is unaffected. It exists solely for
+    engine/eval/ablate.py's "hybrid, no correlation bonus" row (docs/07-
+    EVALUATION.md section 4): with it True, incidents still form exactly as
+    they otherwise would (same components, same signals, same event
+    membership) but score as if CorrelationInputs were all-zero - isolating
+    what the correlation term itself contributes, without duplicating any
+    scoring logic outside compute_risk/compute_confidence."""
     g = event_graph.graph
     min_events = cfg.correlation["min_events_per_incident"]
     max_component = cfg.correlation["max_component_events"]
@@ -122,12 +131,15 @@ def build_incidents(
         categories = sorted({s.category for s in signal_list})
         stages = sorted({s.stage for s in signal_list})
 
-        corr = CorrelationInputs(
-            distinct_categories=len(categories),
-            stage_advances=0 if over_dense else _stage_advance_count(g, component),
-            proximity_factor=0.0 if over_dense else _proximity_factor(
-                [node_ts[e] for e in signal_nodes], cfg),
-            over_dense=over_dense,
+        corr = (
+            CorrelationInputs(over_dense=over_dense) if disable_correlation_bonus
+            else CorrelationInputs(
+                distinct_categories=len(categories),
+                stage_advances=0 if over_dense else _stage_advance_count(g, component),
+                proximity_factor=0.0 if over_dense else _proximity_factor(
+                    [node_ts[e] for e in signal_nodes], cfg),
+                over_dense=over_dense,
+            )
         )
 
         primary_date = window_start.date()

@@ -368,3 +368,76 @@ engine will produce two incompatible interfaces.
 **Before each session ends**, ask it to state: what runs, what was measured (real
 numbers), and what is not finished. Paste that into the next session's prompt so
 context carries forward.
+
+---
+
+## 8. Next session — Track A real-data verification, then Track D
+
+Session 0 is done and committed. Real CERT r4.2 is fully ingested:
+data/artifacts/dataset_profile.json — 1000 users, 70 insiders (30/30/10 by
+scenario), 966 malicious user-days, base rate 0.29%, 32.77M events, 14.4 min /
+2.54GB peak (both inside budget). engine/eval/ is still an empty directory.
+
+```
+[MASTER PROMPT FROM SECTION 1]
+
+TRACK: Real-data verification, then evaluation harness.
+
+PART 1 — verify the engine on real data (do this first; do not skip it).
+Every module in engine/features, engine/detect, engine/correlate, engine/explain,
+engine/route was built and tested against the SYNTHETIC fixture only. It has
+never run against real CERT. Real data already surfaced two schema bugs during
+ground-truth work (to_removable_media missing, a memory issue) - assume there
+are more.
+
+1. Run engine/run.py against the full real corpus in data/raw/r4.2/. If memory
+   is tight on this machine, chunk it the same way ground_truth ingestion did
+   (temporal_chunked_6x) and say so explicitly in any output - never let a
+   chunked-run number look like a single-shot number.
+2. Pick 3-5 of the 70 real labelled insiders (one from each scenario in
+   data/raw/answers/) and manually inspect their scored days around their
+   labelled malicious window. Do the rules that should fire actually fire?
+   (stage.first_ever_usb, exfil.file_copy_to_usb, exfil.leak_platform_visit,
+   ctx.job_search_sustained, stage.hacking_tool_download, exfil.mass_email -
+   depending on scenario). Paste the real signal output for at least 2 of them.
+3. Fix whatever breaks. Common real-data failure modes to watch for: domain
+   strings that don't match config/domain_categories.yaml cleanly, file
+   extensions the synthetic generator never produced, LDAP snapshot gaps,
+   email address formats different from the synthetic dtaa.com pattern.
+4. Write data/artifacts/real_run_report.json: wall-clock, peak memory, event
+   count, signal count, incident count, and the per-scenario spot-check result
+   from step 2. This is the honesty check before Track D reports anything.
+
+PART 2 — build engine/eval/harness.py and engine/eval/ablate.py.
+Read docs/07-EVALUATION.md IN FULL before writing anything.
+
+5. Ground truth join: use engine/ingest/ground_truth.py output against scored
+   incidents. Attribution rule: an incident counts as a true positive ONLY if it
+   falls inside that user's labelled malicious window. Flagging a real insider
+   on an unrelated day is a false positive, not a lucky hit - without this the
+   whole metric is meaningless.
+6. Implement every metric in docs/07 section 3: insider recall (before the
+   final malicious act), incident precision, auto-flag precision, PR-AUC,
+   precision@k for k in {5,10,25,50}/day, recall at a 25/day budget, median
+   time-to-detect, investigation burden, and ECE calibration over 10 bins.
+   Do NOT report ROC-AUC - state why it's absent (base rate 0.29% makes it
+   flatter every detector).
+7. Bootstrap 95% CIs over 1000 resamples at the USER level (70 users), not
+   user-day level - user-days within one insider are correlated and resampling
+   them independently understates the interval.
+8. Per-rule diagnostics table: fire count, standalone precision, in-context
+   precision, measured log-odds, configured weight, weight drift, unique
+   contribution (insiders caught ONLY by that rule).
+9. engine/eval/ablate.py - the 7-row ablation table from docs/07 section 4,
+   each row a config flag so it's one command. If a row contradicts the pitch,
+   report it honestly - that's more credible than a missing row.
+10. Guard: harness refuses to emit a report unless dataset_profile.json says
+    data_source: "real_cert_r42". Stamp data_source into every report file too.
+11. Temporal split only: validation on the first 60% of the date range, test
+    on the last 40%. Never shuffled cross-validation.
+12. Write the final report to data/artifacts/eval_report.json and print the
+    headline summary paragraph in the exact style of docs/07 section 10.
+
+Show me the REAL numbers when you're done - not a projection, the actual
+computed report.
+```
