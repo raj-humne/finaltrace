@@ -70,7 +70,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </button>
             {user && (
               <div className="flex items-center gap-2 text-xs text-(--color-ink-secondary)">
-                <span>{user.name}</span>
+                <span>{user.display_name}</span>
                 <button onClick={() => logout().then(() => navigate("/login"))} className="text-(--color-ink-muted) underline-offset-2 hover:underline">
                   Sign out
                 </button>

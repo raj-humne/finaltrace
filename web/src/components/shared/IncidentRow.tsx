@@ -2,16 +2,14 @@ import { Link } from "react-router-dom";
 import { LaneChip } from "./LaneChip";
 import { ConfidenceMeter } from "./ConfidenceMeter";
 import { ChainSpine } from "./ChainSpine";
-import { emberForRisk } from "@/lib/design";
+import { emberForRisk, type TriageLane } from "@/lib/design";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import type { components } from "@/lib/api/types.gen";
 
 type IncidentListItem = components["schemas"]["IncidentListItem"];
 
 function contextLine(item: IncidentListItem): string {
-  if (item.departing_in_days != null) return `Departing in ${item.departing_in_days} days`;
-  if (item.baseline_days != null) return `Baseline ${item.baseline_days} days`;
-  if (item.campaign_incident_count) return `${item.campaign_incident_count} in this campaign`;
+  if (item.campaign_id) return "Part of a campaign";
   return item.status === "closed" ? "Reviewed" : "First incident";
 }
 
@@ -23,7 +21,7 @@ export function IncidentRow({ item }: { item: IncidentListItem }) {
       className="grid grid-cols-[auto_auto_1fr] items-start gap-x-4 gap-y-1.5 border-b border-(--color-hairline) px-4 py-3 hover:bg-(--color-surface)"
     >
       <div className="flex w-28 flex-col gap-1.5">
-        <LaneChip lane={item.triage_lane ?? "MONITOR"} />
+        <LaneChip lane={(item.triage_lane as TriageLane) ?? "MONITOR"} />
         <span className="font-mono-tab text-xl" style={{ color: emberForRisk(risk) }}>
           {risk.toFixed(0)}
         </span>

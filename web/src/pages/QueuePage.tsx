@@ -24,11 +24,16 @@ export function QueuePage() {
   const { data, isLoading, isError } = useIncidents({
     lane: lane === "ALL" ? undefined : lane,
     stage_max: stageMax,
-    sort,
     limit: 500,
   });
 
-  const items = (data?.items ?? []).filter((i) => !department || i.department === department);
+  // The live API always returns risk-desc and ignores `sort` (Track B, see
+  // api/routers/incidents.py), so honour the sort choice client-side.
+  const sortField = sort.replace(/^-/, "") as "risk" | "confidence";
+  const items = (data?.items ?? [])
+    .filter((i) => !department || i.department === department)
+    .slice()
+    .sort((a, b) => (b[sortField] ?? 0) - (a[sortField] ?? 0));
   const facets = data?.facets;
 
   const parentRef = useRef<HTMLDivElement>(null);

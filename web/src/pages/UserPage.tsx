@@ -6,7 +6,7 @@ import { RiskTrendChart } from "@/components/shared/RiskTrendChart";
 import { WorkingWindowBar } from "@/components/shared/WorkingWindowBar";
 import { LaneChip } from "@/components/shared/LaneChip";
 import { ErrorState } from "@/components/shared/EmptyState";
-import { emberForRisk } from "@/lib/design";
+import { emberForRisk, type TriageLane } from "@/lib/design";
 import { formatDate } from "@/lib/utils";
 
 export function UserPage() {
@@ -69,7 +69,7 @@ export function UserPage() {
         </h2>
         {(incidents?.items ?? []).map((inc) => (
           <Link key={inc.incident_id} to={`/incidents/${inc.incident_id}`} className="flex items-center gap-4 border-b border-(--color-hairline) px-4 py-3 last:border-b-0 hover:bg-(--color-surface)">
-            <LaneChip lane={inc.triage_lane ?? "MONITOR"} className="w-32 shrink-0" />
+            <LaneChip lane={(inc.triage_lane as TriageLane) ?? "MONITOR"} className="w-32 shrink-0" />
             <span className="font-mono-tab text-sm" style={{ color: emberForRisk(inc.risk ?? 0) }}>
               {inc.risk?.toFixed(1)}
             </span>

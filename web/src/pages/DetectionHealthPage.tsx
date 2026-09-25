@@ -7,14 +7,14 @@ import { cn } from "@/lib/utils";
 export function DetectionHealthPage() {
   const { data: health } = useDetectionHealth();
   const { data: rules } = useRules();
-  const ruleIds = useMemo(() => (rules?.items ?? []).map((r) => r.rule_id!).filter(Boolean), [rules]);
+  const ruleIds = useMemo(() => (rules ?? []).map((r) => r.id!).filter(Boolean), [rules]);
   const statsQueries = useRuleStatsFor(ruleIds);
 
   const rows = useMemo(() => {
     return ruleIds
       .map((id, i) => {
         const stats = statsQueries[i]?.data;
-        const rule = rules?.items?.find((r) => r.rule_id === id);
+        const rule = rules?.find((r) => r.id === id);
         if (!stats) return null;
         return { id, name: rule?.name ?? id, ...stats };
       })

@@ -1,11 +1,11 @@
 import { useMemo, useRef, useState, useCallback } from "react";
 import ForceGraph2D, { type NodeObject, type LinkObject, type ForceGraphMethods } from "react-force-graph-2d";
 import { SOURCE_SHAPES, emberForRisk, type EventSource } from "@/lib/design";
-import { cn } from "@/lib/utils";
+import { cn, parseApiTimestamp } from "@/lib/utils";
 import type { components } from "@/lib/api/types.gen";
 
-type NodeDatum = components["schemas"]["GraphNode"];
-type LinkDatum = components["schemas"]["GraphEdge"];
+type NodeDatum = components["schemas"]["GraphNodeOut"];
+type LinkDatum = components["schemas"]["GraphEdgeOut"];
 type FGNode = NodeObject<NodeDatum>;
 type FGLink = LinkObject<NodeDatum, LinkDatum>;
 
@@ -63,7 +63,7 @@ export function CorrelationGraph({ nodes, edges, selectedId, onSelect, overDense
   const fgRef = useRef<ForceGraphMethods<NodeDatum, LinkDatum> | undefined>(undefined);
 
   const { graphData, tMin, tSpan } = useMemo(() => {
-    const times = nodes.map((n) => new Date(n.ts ?? 0).getTime());
+    const times = nodes.map((n) => (n.ts ? parseApiTimestamp(n.ts).getTime() : 0));
     const tMin = Math.min(...times);
     const tMax = Math.max(...times);
     const tSpan = Math.max(1, tMax - tMin);
@@ -92,7 +92,7 @@ export function CorrelationGraph({ nodes, edges, selectedId, onSelect, overDense
       if (!fg) return;
       graphData.nodes.forEach((n) => {
         if (mode === "temporal") {
-          const t = new Date(n.ts ?? 0).getTime();
+          const t = n.ts ? parseApiTimestamp(n.ts).getTime() : 0;
           n.fx = 40 + ((t - tMin) / tSpan) * 720;
           n.fy = 40 + (n.stage ?? 0) * 22;
         } else {

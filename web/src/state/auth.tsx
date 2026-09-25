@@ -1,10 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import type { components } from "@/lib/api/types.gen";
 
-export interface SessionUser {
-  analyst_id: string;
-  name: string;
-  role: "analyst" | "detection_engineer";
-}
+export type SessionUser = components["schemas"]["AccountOut"];
 
 interface AuthState {
   user: SessionUser | null;
@@ -43,8 +40,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const problem = await res.json().catch(() => null);
       throw new Error(problem?.detail ?? "Login failed.");
     }
-    const body = await res.json();
-    setUser(body.user);
+    const body: components["schemas"]["LoginResponse"] = await res.json();
+    setUser(body.account);
     setStatus("authenticated");
   }, []);
 

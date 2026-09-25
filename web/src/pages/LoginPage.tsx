@@ -74,7 +74,7 @@ export function LoginPage() {
           >
             {submitting ? "Signing in…" : "Sign in"}
           </button>
-          <p className="text-center text-xs text-(--color-ink-muted)">Demo credentials: priya.s / analyst-demo</p>
+          <p className="text-center text-xs text-(--color-ink-muted)">Demo credentials: priya.s / analyst-demo-pw</p>
         </form>
       </div>
     </div>

@@ -5,6 +5,7 @@ import { useCampaign } from "@/hooks/useCampaign";
 import { ChainSpine } from "@/components/shared/ChainSpine";
 import { ScoreMeter } from "@/components/shared/ScoreMeter";
 import { LaneChip } from "@/components/shared/LaneChip";
+import type { TriageLane } from "@/lib/design";
 import { CorrelationGraph } from "@/components/shared/CorrelationGraph";
 import { SignalCard } from "@/components/shared/SignalCard";
 import { VerdictForm } from "@/components/shared/VerdictForm";
@@ -37,6 +38,10 @@ export function IncidentPage() {
 
   const risk = incident.score?.risk ?? 0;
   const confidence = incident.score?.confidence ?? 0;
+  // `window` is a free-form record (Pydantic dict[str, Any] mixing datetime and float fields).
+  const windowStart = typeof incident.window?.start === "string" ? incident.window.start : undefined;
+  const windowEnd = typeof incident.window?.end === "string" ? incident.window.end : undefined;
+  const windowDurationMin = typeof incident.window?.duration_min === "number" ? incident.window.duration_min : undefined;
   const attributionBySignal = new Map((incident.attribution?.items ?? []).map((a) => [String(a.signal_id), a]));
   const selectedSignal = selectedId
     ? (incident.signals ?? []).find((s) => (s.evidence_event_ids ?? []).includes(selectedId) || String(s.signal_id) === selectedId)
@@ -60,7 +65,7 @@ export function IncidentPage() {
       </div>
 
       <div className="flex items-start gap-8 rounded-lg border border-(--color-hairline) bg-(--color-surface-raised) p-4">
-        <LaneChip lane={incident.score?.triage_lane ?? "MONITOR"} className="mt-1 shrink-0" />
+        <LaneChip lane={(incident.score?.triage_lane as TriageLane) ?? "MONITOR"} className="mt-1 shrink-0" />
         <ScoreMeter label="Risk" value={risk} threshold={incident.attribution?.alert_threshold ?? 40} thresholdLabel={`alert at ${incident.attribution?.alert_threshold ?? 40}`} className="flex-1" />
         <ScoreMeter
           label="Confidence"
@@ -81,9 +86,9 @@ export function IncidentPage() {
       <section className="rounded-lg border border-(--color-hairline) bg-(--color-surface-raised) p-4">
         <h2 className="mb-4 text-sm font-medium text-(--color-ink-secondary)">The chain</h2>
         <ChainSpine size="lg" activeStages={activeStages} events={eventPins} />
-        {incident.window?.start && incident.window?.end && (
+        {windowStart && windowEnd && (
           <p className="mt-2 text-xs text-(--color-ink-muted)">
-            {formatDate(incident.window.start)}, {formatTime(incident.window.start)}–{formatTime(incident.window.end)} · {incident.window.duration_min?.toFixed(1)} min
+            {formatDate(windowStart)}, {formatTime(windowStart)}–{formatTime(windowEnd)} · {windowDurationMin?.toFixed(1)} min
           </p>
         )}
       </section>
@@ -145,7 +150,7 @@ export function IncidentPage() {
 
       <section className="rounded-lg border border-(--color-hairline) bg-(--color-surface-raised) p-4">
         <h2 className="mb-3 text-sm font-medium text-(--color-ink-secondary)">Record a verdict</h2>
-        <VerdictForm incidentId={incident.incident_id!} closed={incident.status === "closed"} startedAt={startedAt} />
+        <VerdictForm incidentId={incident.incident_id!} userId={incident.user?.user_id ?? ""} closed={incident.status === "closed"} startedAt={startedAt} />
       </section>
     </div>
   );

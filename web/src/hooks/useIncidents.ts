@@ -17,7 +17,7 @@ export function useIncidents(filters: IncidentQueueFilters = {}) {
   return useQuery({
     queryKey: ["incidents", filters],
     queryFn: async () => {
-      const { data, error } = await api.GET("/incidents", { params: { query: filters } });
+      const { data, error } = await api.GET("/api/v1/incidents", { params: { query: filters } });
       if (error) throw error;
       return data;
     },
@@ -28,7 +28,7 @@ export function useIncident(incidentId: string | undefined) {
   return useQuery({
     queryKey: ["incident", incidentId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/incidents/{incident_id}", { params: { path: { incident_id: incidentId! } } });
+      const { data, error } = await api.GET("/api/v1/incidents/{incident_id}", { params: { path: { incident_id: incidentId! } } });
       if (error) throw error;
       return data;
     },
@@ -40,7 +40,7 @@ export function useIncidentGraph(incidentId: string | undefined) {
   return useQuery({
     queryKey: ["incident-graph", incidentId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/incidents/{incident_id}/graph", { params: { path: { incident_id: incidentId! } } });
+      const { data, error } = await api.GET("/api/v1/incidents/{incident_id}/graph", { params: { path: { incident_id: incidentId! } } });
       if (error) throw error;
       return data;
     },

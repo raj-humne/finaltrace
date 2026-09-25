@@ -4,14 +4,15 @@
  */
 
 export interface paths {
-    "/health": {
+    "/api/v1/health": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["getHealth"];
+        /** Health */
+        get: operations["health_api_v1_health_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -20,7 +21,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/ingest": {
+    "/api/v1/auth/login": {
         parameters: {
             query?: never;
             header?: never;
@@ -29,174 +30,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["postIngest"];
+        /** Login */
+        post: operations["login_api_v1_auth_login_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/ingest/runs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listIngestRuns"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/ingest/runs/{run_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getIngestRun"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/users": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listUsers"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/users/{user_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getUser"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/users/{user_id}/risk": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getUserRisk"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/users/{user_id}/timeline": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getUserTimeline"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/incidents": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listIncidents"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/incidents/{incident_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getIncident"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/incidents/{incident_id}/graph": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getIncidentGraph"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/incidents/{incident_id}/export": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["exportIncident"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/incidents/{incident_id}/review": {
+    "/api/v1/auth/logout": {
         parameters: {
             query?: never;
             header?: never;
@@ -205,21 +47,23 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["reviewIncident"];
+        /** Logout */
+        post: operations["logout_api_v1_auth_logout_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/campaigns": {
+    "/api/v1/auth/me": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["listCampaigns"];
+        /** Me */
+        get: operations["me_api_v1_auth_me_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -228,14 +72,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/campaigns/{campaign_id}": {
+    "/api/v1/suppressions": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["getCampaign"];
+        /** List Suppressions */
+        get: operations["list_suppressions_api_v1_suppressions_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -244,71 +89,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/rules": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listRules"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/rules/{rule_id}/stats": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getRuleStats"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/detection/health": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getDetectionHealth"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/eval/report": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getEvalReport"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/analyze": {
+    "/api/v1/suppressions/{suppression_id}/activate": {
         parameters: {
             query?: never;
             header?: never;
@@ -317,14 +98,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["analyze"];
+        /** Activate Suppression */
+        post: operations["activate_suppression_api_v1_suppressions__suppression_id__activate_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/auth/login": {
+    "/api/v1/suppressions/{suppression_id}/revoke": {
         parameters: {
             query?: never;
             header?: never;
@@ -333,14 +115,151 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["login"];
+        /** Revoke Suppression */
+        post: operations["revoke_suppression_api_v1_suppressions__suppression_id__revoke_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/auth/logout": {
+    "/api/v1/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Users */
+        get: operations["list_users_api_v1_users_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get User */
+        get: operations["get_user_api_v1_users__user_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/{user_id}/risk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get User Risk */
+        get: operations["get_user_risk_api_v1_users__user_id__risk_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/{user_id}/timeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get User Timeline */
+        get: operations["get_user_timeline_api_v1_users__user_id__timeline_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/incidents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Incidents */
+        get: operations["list_incidents_api_v1_incidents_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/incidents/{incident_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Incident */
+        get: operations["get_incident_api_v1_incidents__incident_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/incidents/{incident_id}/graph": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Incident Graph */
+        get: operations["get_incident_graph_api_v1_incidents__incident_id__graph_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/incidents/{incident_id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Incident */
+        get: operations["export_incident_api_v1_incidents__incident_id__export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/incidents/{incident_id}/review": {
         parameters: {
             query?: never;
             header?: never;
@@ -349,21 +268,176 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["logout"];
+        /** Review Incident */
+        post: operations["review_incident_api_v1_incidents__incident_id__review_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/auth/me": {
+    "/api/v1/campaigns": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["getMe"];
+        /** List Campaigns */
+        get: operations["list_campaigns_api_v1_campaigns_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/{campaign_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Campaign */
+        get: operations["get_campaign_api_v1_campaigns__campaign_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Rules */
+        get: operations["list_rules_api_v1_rules_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rules/{rule_id}/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Rule Stats */
+        get: operations["rule_stats_api_v1_rules__rule_id__stats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/detection/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detection Health */
+        get: operations["detection_health_api_v1_detection_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/eval/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Eval Report */
+        get: operations["get_eval_report_api_v1_eval_report_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analyze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Analyze */
+        post: operations["analyze_api_v1_analyze_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ingest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ingest */
+        post: operations["ingest_api_v1_ingest_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ingest/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Runs */
+        get: operations["list_runs_api_v1_ingest_runs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ingest/runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Run */
+        get: operations["get_run_api_v1_ingest_runs__run_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -376,530 +450,993 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        ProblemDetails: {
-            type: string;
-            title: string;
-            status: number;
-            detail?: string;
-            instance?: string;
-            trace_id?: string;
-        };
-        LoginRequest: {
+        /** AccountOut */
+        AccountOut: {
+            /** Account Id */
+            account_id: number;
+            /** Username */
             username: string;
-            password: string;
+            /** Display Name */
+            display_name: string;
+            /** Role */
+            role: string;
         };
-        SessionUser: {
-            analyst_id: string;
-            name: string;
-            /** @enum {string} */
-            role: "analyst" | "detection_engineer";
+        /** AlertVolume */
+        AlertVolume: {
+            /** Incidents Per Day */
+            incidents_per_day: number;
+            /** Per 1K Users Per Day */
+            per_1k_users_per_day: number;
         };
-        LoginResponse: {
-            user: components["schemas"]["SessionUser"];
+        /** AnalyzeDailyPoint */
+        AnalyzeDailyPoint: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Risk */
+            risk: number;
+            /** Confidence */
+            confidence: number;
+            /** Signal Count */
+            signal_count: number;
         };
-        HealthResponse: {
-            status?: string;
-            config_version?: string;
-            data?: {
-                ts_min?: string;
-                ts_max?: string;
-                users?: number;
-                events?: number;
-                last_pipeline_run?: string;
+        /** AnalyzeOptions */
+        AnalyzeOptions: {
+            /**
+             * Include Graph
+             * @default false
+             */
+            include_graph: boolean;
+            /**
+             * Force Recompute
+             * @default false
+             */
+            force_recompute: boolean;
+        };
+        /** AnalyzeRequest */
+        AnalyzeRequest: {
+            /** User Id */
+            user_id: string;
+            /**
+             * Date From
+             * Format: date
+             */
+            date_from: string;
+            /**
+             * Date To
+             * Format: date
+             */
+            date_to: string;
+            /**
+             * @default {
+             *       "include_graph": false,
+             *       "force_recompute": false
+             *     }
+             */
+            options: components["schemas"]["AnalyzeOptions"];
+        };
+        /** AnalyzeResponse */
+        AnalyzeResponse: {
+            /** User Id */
+            user_id: string;
+            /** Window */
+            window: {
+                [key: string]: string;
             };
-            engine?: {
-                rules_loaded?: number;
-                cohort_models?: number;
-                mode?: string;
-            };
+            /** Computed In Ms */
+            computed_in_ms: number;
+            /** From Cache */
+            from_cache: boolean;
+            /** Peak Risk */
+            peak_risk: number;
+            /** Incidents */
+            incidents: string[];
+            /** Campaigns */
+            campaigns: string[];
+            /** Daily */
+            daily: components["schemas"]["AnalyzeDailyPoint"][];
+            /** Narrative */
+            narrative: string | null;
         };
-        IngestRequest: {
+        /** AttributionItemOut */
+        AttributionItemOut: {
+            /** Signal Id */
+            signal_id: number;
+            /** Rule Id */
+            rule_id: string;
+            /** Risk Without */
+            risk_without: number;
+            /** Delta */
+            delta: number;
+            /** Rank */
+            rank: number;
+            /** In Minimal Set */
+            in_minimal_set: boolean;
+        };
+        /** AttributionOut */
+        AttributionOut: {
+            /** Note */
+            note: string;
+            /** Items */
+            items: components["schemas"]["AttributionItemOut"][];
+            /** Minimal Sufficient Set */
+            minimal_sufficient_set: string[];
+            /** Alert Threshold */
+            alert_threshold: number;
+        };
+        /** BaselineOut */
+        BaselineOut: {
+            /** Days Available */
+            days_available: number;
+            /** Maturity */
+            maturity: number;
+            /** Working Window */
+            working_window: {
+                [key: string]: number;
+            } | null;
+        };
+        /** Calibration */
+        Calibration: {
+            /** Bins */
+            bins: components["schemas"]["CalibrationBin"][];
+            /** Ece */
+            ece: number;
+        };
+        /** CalibrationBin */
+        CalibrationBin: {
+            /** Confidence Range */
+            confidence_range: number[];
+            /** N */
+            n: number;
+            /** Observed Precision */
+            observed_precision: number | null;
+        };
+        /** CampaignDetailOut */
+        CampaignDetailOut: {
+            /** Campaign Id */
+            campaign_id: string;
+            /** User Id */
+            user_id: string;
+            /**
+             * First Seen
+             * Format: date
+             */
+            first_seen: string;
+            /**
+             * Last Seen
+             * Format: date
+             */
+            last_seen: string;
+            /** Incident Count */
+            incident_count: number;
+            /** Peak Risk */
+            peak_risk: number;
+            /** Campaign Risk */
+            campaign_risk: number;
+            /** Max Stage */
+            max_stage: number;
+            /** Stage Progression */
+            stage_progression: components["schemas"]["StageProgressionPoint"][];
+            /** Narrative */
+            narrative: string;
+        };
+        /** CampaignListItem */
+        CampaignListItem: {
+            /** Campaign Id */
+            campaign_id: string;
+            /** User Id */
+            user_id: string;
+            /**
+             * First Seen
+             * Format: date
+             */
+            first_seen: string;
+            /**
+             * Last Seen
+             * Format: date
+             */
+            last_seen: string;
+            /** Incident Count */
+            incident_count: number;
+            /** Max Stage */
+            max_stage: number;
+            /** Peak Risk */
+            peak_risk: number;
+        };
+        /** CampaignListResponse */
+        CampaignListResponse: {
+            /** Items */
+            items: components["schemas"]["CampaignListItem"][];
+            /** Total */
+            total: number;
+        };
+        /** CampaignRef */
+        CampaignRef: {
+            /** Campaign Id */
+            campaign_id: string;
+            /** Incident Count */
+            incident_count: number;
+            /**
+             * First Seen
+             * Format: date
+             */
+            first_seen: string;
+            /**
+             * Last Seen
+             * Format: date
+             */
+            last_seen: string;
+            /** Stage Progression */
+            stage_progression: number[];
+        };
+        /** Compression */
+        Compression: {
+            /** Signals Per Incident Mean */
+            signals_per_incident_mean: number;
+            /** Events Per Incident Mean */
+            events_per_incident_mean: number;
+        };
+        /** ConfidenceTerms */
+        ConfidenceTerms: {
+            /** Agreement */
+            agreement: number;
+            /** Diversity */
+            diversity: number;
+            /** Completeness */
+            completeness: number;
+            /** Maturity */
+            maturity: number;
+            /** Caps Applied */
+            caps_applied: string[];
+        };
+        /** DetectionHealthOut */
+        DetectionHealthOut: {
+            /** Window */
+            window: {
+                [key: string]: string;
+            };
+            alert_volume: components["schemas"]["AlertVolume"];
+            /** Lane Mix */
+            lane_mix: {
+                [key: string]: number;
+            };
+            compression: components["schemas"]["Compression"];
+            calibration: components["schemas"]["Calibration"];
+            /** Top Firing Rules */
+            top_firing_rules: components["schemas"]["TopFiringRule"][];
+            /** Warnings */
+            warnings: string[];
+        };
+        /** GraphEdgeOut */
+        GraphEdgeOut: {
+            /** Source */
             source: string;
+            /** Target */
+            target: string;
+            /** Gap Seconds */
+            gap_seconds: number;
+            /** Gap Label */
+            gap_label: string;
+            /** Type */
+            type: string;
+            /** Weight */
+            weight: number;
+        };
+        /** GraphNodeOut */
+        GraphNodeOut: {
+            /** Id */
+            id: string;
+            /**
+             * Ts
+             * Format: date-time
+             */
+            ts: string;
+            /** Source */
+            source: string;
+            /** Action */
+            action: string;
+            /** Label */
+            label: string;
+            /** Stage */
+            stage: number | null;
+            /** Risk Contribution */
+            risk_contribution: number;
+            /** Has Signal */
+            has_signal: boolean;
+            /** Pc Id */
+            pc_id: string | null;
+            /** User Id */
+            user_id: string;
+        };
+        /** GraphStats */
+        GraphStats: {
+            /** Node Count */
+            node_count: number;
+            /** Edge Count */
+            edge_count: number;
+            /** Component Diameter */
+            component_diameter: number;
+        };
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
+        };
+        /** HealthData */
+        HealthData: {
+            /** Ts Min */
+            ts_min: string | null;
+            /** Ts Max */
+            ts_max: string | null;
+            /** Users */
+            users: number;
+            /** Events */
+            events: number;
+            /** Last Pipeline Run */
+            last_pipeline_run: string | null;
+        };
+        /** HealthEngine */
+        HealthEngine: {
+            /** Rules Loaded */
+            rules_loaded: number;
+            /** Cohort Models */
+            cohort_models: number;
+            /** Mode */
+            mode: string;
+        };
+        /** HealthResponse */
+        HealthResponse: {
+            /** Status */
+            status: string;
+            /** Config Version */
+            config_version: string;
+            data: components["schemas"]["HealthData"];
+            engine: components["schemas"]["HealthEngine"];
+        };
+        /** IncidentCounts */
+        IncidentCounts: {
+            /**
+             * Auto Flag
+             * @default 0
+             */
+            AUTO_FLAG: number;
+            /**
+             * Analyst Review
+             * @default 0
+             */
+            ANALYST_REVIEW: number;
+            /**
+             * Monitor
+             * @default 0
+             */
+            MONITOR: number;
+            /**
+             * Suppressed
+             * @default 0
+             */
+            SUPPRESSED: number;
+        };
+        /** IncidentDetailOut */
+        IncidentDetailOut: {
+            /** Incident Id */
+            incident_id: string;
+            user: components["schemas"]["UserRef"];
+            /** Window */
+            window: {
+                [key: string]: unknown;
+            };
+            score: components["schemas"]["ScoreOut"];
+            narrative: components["schemas"]["NarrativeOut"];
+            /** Signals */
+            signals: components["schemas"]["SignalDetailOut"][];
+            attribution: components["schemas"]["AttributionOut"];
+            campaign: components["schemas"]["CampaignRef"] | null;
+            /** Status */
+            status: string;
+            review: components["schemas"]["ReviewOut"] | null;
+            /** Config Version */
+            config_version: string;
+            /** Links */
+            links: {
+                [key: string]: string;
+            };
+        };
+        /** IncidentGraphOut */
+        IncidentGraphOut: {
+            /** Incident Id */
+            incident_id: string;
+            /** Over Dense */
+            over_dense: boolean;
+            /** Nodes */
+            nodes: components["schemas"]["GraphNodeOut"][];
+            /** Edges */
+            edges: components["schemas"]["GraphEdgeOut"][];
+            /** Layout Hint */
+            layout_hint: string;
+            stats: components["schemas"]["GraphStats"];
+        };
+        /** IncidentListItem */
+        IncidentListItem: {
+            /** Incident Id */
+            incident_id: string;
+            /** User Id */
+            user_id: string;
+            /** User Name */
+            user_name: string;
+            /** Department */
+            department: string;
+            /** Window */
+            window: {
+                [key: string]: string;
+            };
+            /** Risk */
+            risk: number;
+            /** Confidence */
+            confidence: number;
+            /** Triage Lane */
+            triage_lane: string;
+            /** Status */
+            status: string;
+            /** Headline */
+            headline: string;
+            /** Killchain Stages */
+            killchain_stages: number[];
+            /** Max Stage */
+            max_stage: number;
+            /** Signal Count */
+            signal_count: number;
+            /** Event Count */
+            event_count: number;
+            /** Campaign Id */
+            campaign_id: string | null;
+            /** Top Signal */
+            top_signal: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** IncidentListResponse */
+        IncidentListResponse: {
+            /** Items */
+            items: components["schemas"]["IncidentListItem"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+            /** Total */
+            total: number;
+            /** Facets */
+            facets: {
+                [key: string]: {
+                    [key: string]: number;
+                };
+            };
+        };
+        /** IngestOptions */
+        IngestOptions: {
+            /**
+             * Chunk Size
+             * @default 250000
+             */
+            chunk_size: number;
+            /**
+             * Dry Run
+             * @default false
+             */
+            dry_run: boolean;
+        };
+        /** IngestRequest */
+        IngestRequest: {
+            /** Source */
+            source: string;
+            /**
+             * Adapter
+             * @default cert_r42
+             */
             adapter: string;
-            /** @enum {string} */
-            mode: "file" | "inline";
-            path?: string;
+            /** Mode */
+            mode: string;
+            /** Path */
+            path?: string | null;
+            /** Records */
             records?: {
                 [key: string]: unknown;
-            }[];
-            options?: {
-                chunk_size?: number;
-                dry_run?: boolean;
+            }[] | null;
+            options?: components["schemas"]["IngestOptions"];
+        };
+        /** IngestRunOut */
+        IngestRunOut: {
+            /** Run Id */
+            run_id: string;
+            /** Status */
+            status: string;
+            /** Source */
+            source: string;
+            /** Accepted */
+            accepted: number;
+            /** Rejected */
+            rejected: number;
+            /** Duplicates Skipped */
+            duplicates_skipped: number;
+            /** Ts Range */
+            ts_range: (string | null)[];
+            /** Rejects Sample */
+            rejects_sample: components["schemas"]["RejectSample"][];
+            /** Links */
+            links: {
+                [key: string]: string;
             };
         };
+        /** IngestRunSummary */
         IngestRunSummary: {
-            run_id?: string;
-            status?: string;
-            source?: string;
-            accepted?: number;
-            rejected?: number;
-            duplicates_skipped?: number;
-            ts_range?: string[];
-            rejects_sample?: {
-                row?: number;
-                reason?: string;
-                raw?: string;
-            }[];
-            links?: {
-                self?: string;
-            };
+            /** Run Id */
+            run_id: string;
+            /** Status */
+            status: string;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /** Finished At */
+            finished_at: string | null;
+            /** Rows Accepted */
+            rows_accepted: number;
+            /** Rows Rejected */
+            rows_rejected: number;
+            /** Adapter Id */
+            adapter_id: string | null;
         };
-        IngestRunListResponse: {
-            items?: components["schemas"]["IngestRunSummary"][];
-            next_cursor?: string | null;
-            total?: number;
+        /** LoginRequest */
+        LoginRequest: {
+            /** Username */
+            username: string;
+            /** Password */
+            password: string;
         };
-        UserListItem: {
-            user_id?: string;
-            name?: string;
-            role?: string;
-            department?: string;
-            cohort_key?: string;
-            current_risk?: number;
-            risk_ewma?: number;
-            /** @enum {string} */
-            trend?: "rising" | "falling" | "flat";
-            open_incidents?: number;
-            departing_in_days?: number | null;
+        /** LoginResponse */
+        LoginResponse: {
+            account: components["schemas"]["AccountOut"];
         };
-        UserListResponse: {
-            items?: components["schemas"]["UserListItem"][];
-            next_cursor?: string | null;
-            total?: number;
+        /** NarrativeOut */
+        NarrativeOut: {
+            /** Headline */
+            headline: string;
+            /** Summary */
+            summary: string;
+            /** Detail Bullets */
+            detail_bullets: string[];
+            /** Template Ids */
+            template_ids: string[];
         };
-        UserProfile: {
-            user_id?: string;
-            name?: string;
-            email?: string;
-            org?: {
-                role?: string;
-                department?: string;
-                team?: string;
-                supervisor?: string;
-                cohort_size?: number;
-            };
-            tenure_days?: number;
-            departure_date?: string | null;
-            first_seen?: string;
-            last_seen?: string;
-            baseline?: {
-                days_available?: number;
-                maturity?: number;
-                working_window?: {
-                    start_min?: number;
-                    end_min?: number;
-                };
-            };
-            current_risk?: number;
-            risk_ewma?: number;
-            incident_counts?: {
-                AUTO_FLAG?: number;
-                ANALYST_REVIEW?: number;
-                MONITOR?: number;
-            };
+        /** PeerBandPoint */
+        PeerBandPoint: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** P50 */
+            p50: number;
+            /** P90 */
+            p90: number;
+            /** P99 */
+            p99: number;
         };
-        UserRiskSeries: {
-            user_id?: string;
-            window?: {
-                from?: string;
-                to?: string;
-            };
-            series?: {
-                date?: string;
-                risk?: number;
-                confidence?: number;
-                risk_ewma?: number;
-                signal_count?: number;
-                incident_ids?: string[];
-            }[];
-            peer_band?: {
-                date?: string;
-                p50?: number;
-                p90?: number;
-                p99?: number;
-            }[];
-            summary?: {
-                peak_risk?: number;
-                peak_date?: string;
-                days_above_threshold?: number;
-                trend?: string;
-            };
+        /** ProposeSuppression */
+        ProposeSuppression: {
+            /** Scope */
+            scope: string;
+            /** User Id */
+            user_id?: string | null;
+            /** Cohort Key */
+            cohort_key?: string | null;
+            /** Rule Id */
+            rule_id?: string | null;
+            /** Expires At */
+            expires_at?: string | null;
         };
-        TimelineEvent: {
-            event_id?: string;
-            ts?: string;
-            /** @enum {string} */
-            source?: "logon" | "device" | "file" | "http" | "email";
-            action?: string;
-            pc_id?: string;
-            attrs?: {
+        /** RejectSample */
+        RejectSample: {
+            /** Row */
+            row: number;
+            /** Reason */
+            reason: string;
+            /** Raw */
+            raw: string;
+        };
+        /** ReviewEffects */
+        ReviewEffects: {
+            /** Rule Stats Updated */
+            rule_stats_updated: string[];
+            /** User Risk Ewma Adjusted */
+            user_risk_ewma_adjusted: boolean;
+        };
+        /** ReviewOut */
+        ReviewOut: {
+            /** Review Id */
+            review_id: number;
+            /** Verdict */
+            verdict: string;
+            /** Note */
+            note: string | null;
+            /** Analyst Id */
+            analyst_id: string;
+            /**
+             * Reviewed At
+             * Format: date-time
+             */
+            reviewed_at: string;
+        };
+        /** ReviewRequest */
+        ReviewRequest: {
+            /** Verdict */
+            verdict: string;
+            /** Note */
+            note?: string | null;
+            /** Analyst Id */
+            analyst_id: string;
+            /** Time To Triage Sec */
+            time_to_triage_sec?: number | null;
+            propose_suppression?: components["schemas"]["ProposeSuppression"] | null;
+        };
+        /** ReviewResponse */
+        ReviewResponse: {
+            /** Review Id */
+            review_id: number;
+            /** Incident Id */
+            incident_id: string;
+            /** Verdict */
+            verdict: string;
+            /**
+             * Reviewed At
+             * Format: date-time
+             */
+            reviewed_at: string;
+            /** Incident Status */
+            incident_status: string;
+            /** Suppression */
+            suppression: {
+                [key: string]: unknown;
+            } | null;
+            effects: components["schemas"]["ReviewEffects"];
+        };
+        /** RiskSeriesPoint */
+        RiskSeriesPoint: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Risk */
+            risk: number;
+            /** Confidence */
+            confidence: number;
+            /** Risk Ewma */
+            risk_ewma: number | null;
+            /** Signal Count */
+            signal_count: number;
+            /** Incident Ids */
+            incident_ids: string[];
+        };
+        /** RiskSummary */
+        RiskSummary: {
+            /** Peak Risk */
+            peak_risk: number;
+            /** Peak Date */
+            peak_date: string | null;
+            /** Days Above Threshold */
+            days_above_threshold: number;
+            /** Trend */
+            trend: string;
+        };
+        /** RuleOut */
+        RuleOut: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Category */
+            category: string;
+            /** Stage */
+            stage: number;
+            /** Weight */
+            weight: number;
+            /** Requires Baseline */
+            requires_baseline: boolean;
+            /** Phrase */
+            phrase: string;
+        };
+        /** RuleStatsOut */
+        RuleStatsOut: {
+            /** Rule Id */
+            rule_id: string;
+            /** Configured Weight */
+            configured_weight: number;
+            /** Fire Count */
+            fire_count: number;
+            /** Fire Rate Per User Day */
+            fire_rate_per_user_day: number;
+            /** Reviewed */
+            reviewed: number;
+            /** Confirmed */
+            confirmed: number;
+            /** Benign */
+            benign: number;
+            /** Inconclusive */
+            inconclusive: number;
+            /** Observed Precision */
+            observed_precision: number | null;
+            /** Measured Log Odds */
+            measured_log_odds: number | null;
+            /** Weight Drift */
+            weight_drift: number | null;
+            /** Recommendation */
+            recommendation: string;
+        };
+        /** ScoreBreakdown */
+        ScoreBreakdown: {
+            /** Prior Logit */
+            prior_logit: number;
+            /** Rule Points */
+            rule_points: number;
+            /** Ml Points */
+            ml_points: number;
+            /** Correlation Points */
+            correlation_points: number;
+            /** Total Logit */
+            total_logit: number;
+            /** Tau */
+            tau: number;
+        };
+        /** ScoreOut */
+        ScoreOut: {
+            /** Risk */
+            risk: number;
+            /** Confidence */
+            confidence: number;
+            /** Triage Lane */
+            triage_lane: string;
+            breakdown: components["schemas"]["ScoreBreakdown"];
+            confidence_terms: components["schemas"]["ConfidenceTerms"];
+        };
+        /** SignalDetailOut */
+        SignalDetailOut: {
+            /** Signal Id */
+            signal_id: number;
+            /** Rule Id */
+            rule_id: string;
+            /** Name */
+            name: string;
+            /** Category */
+            category: string;
+            /** Stage */
+            stage: number;
+            /** Strength */
+            strength: number;
+            /** Weight */
+            weight: number;
+            /** Contribution */
+            contribution: number;
+            /** Phrase */
+            phrase: string;
+            /** Detail */
+            detail: {
                 [key: string]: unknown;
             };
-            signal_ids?: number[];
-            risk_after?: number;
-            stage?: number;
-        };
-        UserTimeline: {
-            date?: string;
-            events?: components["schemas"]["TimelineEvent"][];
-            working_window?: {
-                start_min?: number;
-                end_min?: number;
-            };
-            final_risk?: number;
-        };
-        /** @enum {string} */
-        TriageLane: "AUTO_FLAG" | "ANALYST_REVIEW" | "MONITOR" | "SUPPRESSED";
-        IncidentListItem: {
-            incident_id?: string;
-            user_id?: string;
-            user_name?: string;
-            department?: string;
-            window?: {
-                start?: string;
-                end?: string;
-            };
-            risk?: number;
-            confidence?: number;
-            triage_lane?: components["schemas"]["TriageLane"];
-            /** @enum {string} */
-            status?: "open" | "closed";
-            headline?: string;
-            killchain_stages?: number[];
-            max_stage?: number;
-            signal_count?: number;
-            event_count?: number;
-            campaign_id?: string | null;
-            top_signal?: {
-                rule_id?: string;
-                delta?: number;
-            };
-            baseline_days?: number | null;
-            departing_in_days?: number | null;
-            campaign_incident_count?: number | null;
-        };
-        IncidentListResponse: {
-            items?: components["schemas"]["IncidentListItem"][];
-            next_cursor?: string | null;
-            total?: number;
-            facets?: {
-                lane?: {
-                    [key: string]: number;
-                };
-                max_stage?: {
-                    [key: string]: number;
-                };
-            };
-        };
-        Signal: {
-            signal_id?: number;
-            rule_id?: string;
-            name?: string;
-            category?: string;
-            stage?: number;
-            strength?: number;
-            weight?: number;
-            contribution?: number;
-            phrase?: string;
-            detail?: {
-                feature?: string;
-                observed?: number;
-                threshold?: number;
-                z_self?: number;
-                z_peer?: number;
-            };
-            evidence_event_ids?: string[];
+            /** Evidence Event Ids */
+            evidence_event_ids: string[];
+            /** References */
             references?: string[];
         };
-        AttributionItem: {
-            signal_id?: number;
-            rule_id?: string;
-            risk_without?: number;
-            delta?: number;
-            rank?: number;
-            in_minimal_set?: boolean;
+        /** StageProgressionPoint */
+        StageProgressionPoint: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Stage */
+            stage: number;
+            /** Incident Id */
+            incident_id: string;
+            /** Risk */
+            risk: number;
+            /** Headline */
+            headline: string;
         };
-        IncidentDetail: {
-            incident_id?: string;
-            user?: {
-                user_id?: string;
-                name?: string;
-                role?: string;
-                department?: string;
-                cohort_size?: number;
-            };
-            window?: {
-                start?: string;
-                end?: string;
-                duration_min?: number;
-            };
-            score?: {
-                risk?: number;
-                confidence?: number;
-                triage_lane?: components["schemas"]["TriageLane"];
-                breakdown?: {
-                    prior_logit?: number;
-                    rule_points?: number;
-                    ml_points?: number;
-                    correlation_points?: number;
-                    total_logit?: number;
-                    tau?: number;
-                };
-                confidence_terms?: {
-                    agreement?: number;
-                    diversity?: number;
-                    completeness?: number;
-                    maturity?: number;
-                    caps_applied?: string[];
-                };
-            };
-            narrative?: {
-                headline?: string;
-                summary?: string;
-                detail_bullets?: string[];
-                template_ids?: string[];
-            };
-            signals?: components["schemas"]["Signal"][];
-            attribution?: {
-                note?: string;
-                items?: components["schemas"]["AttributionItem"][];
-                minimal_sufficient_set?: string[];
-                alert_threshold?: number;
-            };
-            campaign?: {
-                campaign_id?: string;
-                incident_count?: number;
-                first_seen?: string;
-                last_seen?: string;
-                stage_progression?: number[];
-            } | null;
-            /** @enum {string} */
-            status?: "open" | "closed";
-            review?: {
-                verdict?: string;
-                note?: string;
-                analyst_id?: string;
-                reviewed_at?: string;
-            } | null;
-            config_version?: string;
-            links?: {
-                graph?: string;
-                export?: string;
-            };
+        /** SuppressionOut */
+        SuppressionOut: {
+            /** Suppression Id */
+            suppression_id: number;
+            /** Scope */
+            scope: string;
+            /** User Id */
+            user_id: string | null;
+            /** Cohort Key */
+            cohort_key: string | null;
+            /** Rule Id */
+            rule_id: string | null;
+            /** Reason */
+            reason: string;
+            /** Source Review */
+            source_review: number | null;
+            /** Status */
+            status: string;
+            /** Created By */
+            created_by: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Expires At */
+            expires_at: string | null;
         };
-        GraphNode: {
-            id?: string;
-            ts?: string;
-            source?: string;
-            action?: string;
-            label?: string;
-            stage?: number;
-            risk_contribution?: number;
-            has_signal?: boolean;
-            pc_id?: string;
-            user_id?: string;
-        };
-        GraphEdge: {
-            source?: string;
-            target?: string;
-            gap_seconds?: number;
-            gap_label?: string;
-            /** @enum {string} */
-            type?: "temporal" | "stage_advance" | "shared_pc" | "shared_file";
-            weight?: number;
-        };
-        IncidentGraph: {
-            incident_id?: string;
-            over_dense?: boolean;
-            nodes?: components["schemas"]["GraphNode"][];
-            edges?: components["schemas"]["GraphEdge"][];
-            layout_hint?: string;
-            stats?: {
-                node_count?: number;
-                edge_count?: number;
-                component_diameter?: number;
-            };
-        };
-        EvidencePack: {
-            incident?: components["schemas"]["IncidentDetail"];
-            raw_events?: {
-                [key: string]: unknown;
-            }[];
-            config_snapshot?: {
+        /** TimelineEvent */
+        TimelineEvent: {
+            /** Event Id */
+            event_id: string;
+            /**
+             * Ts
+             * Format: date-time
+             */
+            ts: string;
+            /** Source */
+            source: string;
+            /** Action */
+            action: string;
+            /** Pc Id */
+            pc_id: string | null;
+            /** Attrs */
+            attrs: {
                 [key: string]: unknown;
             };
-            watermark?: {
-                exported_by?: string;
-                exported_at?: string;
-            };
+            /** Signal Ids */
+            signal_ids: number[];
+            /** Risk After */
+            risk_after: number | null;
+            /** Stage */
+            stage: number | null;
         };
-        SuppressionProposal: {
-            /** @enum {string} */
-            scope?: "user_rule" | "rule";
-            user_id?: string | null;
-            rule_id?: string;
-            expires_at?: string;
-        };
-        ReviewRequest: {
-            /** @enum {string} */
-            verdict: "confirmed_threat" | "benign" | "inconclusive";
-            note?: string;
-            analyst_id: string;
-            time_to_triage_sec?: number;
-            propose_suppression?: components["schemas"]["SuppressionProposal"] | null;
-        };
-        ReviewResponse: {
-            review_id?: number;
-            incident_id?: string;
-            verdict?: string;
-            reviewed_at?: string;
-            incident_status?: string;
-            suppression?: {
-                status?: string;
+        /** TimelineResponse */
+        TimelineResponse: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Events */
+            events: components["schemas"]["TimelineEvent"][];
+            /** Working Window */
+            working_window: {
+                [key: string]: number;
             } | null;
-            effects?: {
-                rule_stats_updated?: string[];
-                user_risk_ewma_adjusted?: boolean;
-            };
+            /** Final Risk */
+            final_risk: number | null;
         };
-        CampaignStageEvent: {
-            date?: string;
-            stage?: number;
-            incident_id?: string;
-            risk?: number;
-            headline?: string;
+        /** TopFiringRule */
+        TopFiringRule: {
+            /** Rule Id */
+            rule_id: string;
+            /** Count */
+            count: number;
+            /** Observed Precision */
+            observed_precision: number | null;
         };
-        Campaign: {
-            campaign_id?: string;
-            user_id?: string;
-            first_seen?: string;
-            last_seen?: string;
-            incident_count?: number;
-            peak_risk?: number;
-            campaign_risk?: number;
-            max_stage?: number;
-            stage_progression?: components["schemas"]["CampaignStageEvent"][];
-            narrative?: string;
-        };
-        CampaignListItem: {
-            campaign_id?: string;
-            user_id?: string;
-            user_name?: string;
-            first_seen?: string;
-            last_seen?: string;
-            incident_count?: number;
-            peak_risk?: number;
-            max_stage?: number;
-        };
-        CampaignListResponse: {
-            items?: components["schemas"]["CampaignListItem"][];
-            total?: number;
-        };
-        RuleCatalogueItem: {
-            rule_id?: string;
-            name?: string;
-            category?: string;
-            stage?: number;
-            weight?: number;
-            requires_baseline?: boolean;
-            description?: string;
-        };
-        RuleListResponse: {
-            config_version?: string;
-            items?: components["schemas"]["RuleCatalogueItem"][];
-        };
-        RuleStats: {
-            rule_id?: string;
-            configured_weight?: number;
-            fire_count?: number;
-            fire_rate_per_user_day?: number;
-            reviewed?: number;
-            confirmed?: number;
-            benign?: number;
-            inconclusive?: number;
-            observed_precision?: number;
-            measured_log_odds?: number;
-            weight_drift?: number;
-            recommendation?: string;
-        };
-        DetectionHealth: {
-            window?: {
-                from?: string;
-                to?: string;
-            };
-            alert_volume?: {
-                incidents_per_day?: number;
-                per_1k_users_per_day?: number;
-            };
-            lane_mix?: {
-                [key: string]: number;
-            };
-            compression?: {
-                signals_per_incident_mean?: number;
-                events_per_incident_mean?: number;
-            };
-            calibration?: {
-                bins?: {
-                    confidence_range?: number[];
-                    n?: number;
-                    observed_precision?: number;
-                }[];
-                ece?: number;
-            };
-            top_firing_rules?: {
-                rule_id?: string;
-                count?: number;
-                observed_precision?: number;
-            }[];
-            warnings?: string[];
-        };
-        EvalReport: {
-            config_version?: string;
-            data_source?: string;
-            generated_at?: string;
-            primary_metrics?: {
-                insider_recall?: number[];
-                incident_precision?: number[];
-                auto_flag_precision?: number[];
-                pr_auc?: number[];
-                median_time_to_detect_days?: number;
-            };
-            pr_curve?: {
-                precision?: number;
-                recall?: number;
-            }[];
-            per_scenario_recall?: {
-                [key: string]: number;
-            };
-            time_to_detect_distribution?: number[];
-        };
-        AnalyzeRequest: {
+        /** UserDetailResponse */
+        UserDetailResponse: {
+            /** User Id */
             user_id: string;
-            date_from: string;
-            date_to: string;
-            options?: {
-                include_graph?: boolean;
-                force_recompute?: boolean;
-            };
+            /** Name */
+            name: string;
+            /** Email */
+            email: string | null;
+            org: components["schemas"]["UserOrgOut"];
+            /** Tenure Days */
+            tenure_days: number;
+            /** Departure Date */
+            departure_date: string | null;
+            /**
+             * First Seen
+             * Format: date
+             */
+            first_seen: string;
+            /**
+             * Last Seen
+             * Format: date
+             */
+            last_seen: string;
+            baseline: components["schemas"]["BaselineOut"];
+            /** Current Risk */
+            current_risk: number;
+            /** Risk Ewma */
+            risk_ewma: number;
+            incident_counts: components["schemas"]["IncidentCounts"];
         };
-        AnalyzeResponse: {
-            user_id?: string;
-            window?: {
-                from?: string;
-                to?: string;
+        /** UserListItem */
+        UserListItem: {
+            /** User Id */
+            user_id: string;
+            /** Name */
+            name: string;
+            /** Role */
+            role: string;
+            /** Department */
+            department: string;
+            /** Cohort Key */
+            cohort_key: string;
+            /** Current Risk */
+            current_risk: number;
+            /** Risk Ewma */
+            risk_ewma: number;
+            /** Trend */
+            trend: string;
+            /** Open Incidents */
+            open_incidents: number;
+            /** Departing In Days */
+            departing_in_days: number | null;
+        };
+        /** UserListResponse */
+        UserListResponse: {
+            /** Items */
+            items: components["schemas"]["UserListItem"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+            /** Total */
+            total: number;
+        };
+        /** UserOrgOut */
+        UserOrgOut: {
+            /** Role */
+            role: string;
+            /** Department */
+            department: string;
+            /** Team */
+            team: string | null;
+            /** Supervisor */
+            supervisor: string | null;
+            /** Cohort Size */
+            cohort_size: number;
+        };
+        /** UserRef */
+        UserRef: {
+            /** User Id */
+            user_id: string;
+            /** Name */
+            name: string;
+            /** Role */
+            role: string;
+            /** Department */
+            department: string;
+            /** Cohort Size */
+            cohort_size: number;
+        };
+        /** UserRiskResponse */
+        UserRiskResponse: {
+            /** User Id */
+            user_id: string;
+            /** Window */
+            window: {
+                [key: string]: string;
             };
-            computed_in_ms?: number;
-            from_cache?: boolean;
-            peak_risk?: number;
-            incidents?: string[];
-            campaigns?: string[];
-            daily?: {
-                date?: string;
-                risk?: number;
-                confidence?: number;
-                signal_count?: number;
-            }[];
-            narrative?: string;
+            /** Series */
+            series: components["schemas"]["RiskSeriesPoint"][];
+            /** Peer Band */
+            peer_band: components["schemas"]["PeerBandPoint"][];
+            summary: components["schemas"]["RiskSummary"];
+        };
+        /** ValidationError */
+        ValidationError: {
+            /** Location */
+            loc: (string | number)[];
+            /** Message */
+            msg: string;
+            /** Error Type */
+            type: string;
+            /** Input */
+            input?: unknown;
+            /** Context */
+            ctx?: Record<string, never>;
         };
     };
     responses: never;
@@ -910,7 +1447,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    getHealth: {
+    health_api_v1_health_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -919,7 +1456,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -930,35 +1467,81 @@ export interface operations {
             };
         };
     };
-    postIngest: {
+    login_api_v1_auth_login_post: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody?: {
+        requestBody: {
             content: {
-                "application/json": components["schemas"]["IngestRequest"];
+                "application/json": components["schemas"]["LoginRequest"];
             };
         };
         responses: {
-            /** @description Accepted */
-            202: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["IngestRunSummary"];
+                    "application/json": components["schemas"]["LoginResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    listIngestRuns: {
+    logout_api_v1_auth_logout_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    me_api_v1_auth_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountOut"];
+                };
+            };
+        };
+    };
+    list_suppressions_api_v1_suppressions_get: {
         parameters: {
             query?: {
-                status?: string;
-                limit?: number;
+                status?: string | null;
             };
             header?: never;
             path?: never;
@@ -966,50 +1549,96 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["IngestRunListResponse"];
+                    "application/json": components["schemas"]["SuppressionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    getIngestRun: {
+    activate_suppression_api_v1_suppressions__suppression_id__activate_post: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                run_id: string;
+                suppression_id: number;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["IngestRunSummary"];
+                    "application/json": components["schemas"]["SuppressionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    listUsers: {
+    revoke_suppression_api_v1_suppressions__suppression_id__revoke_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                suppression_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuppressionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_users_api_v1_users_get: {
         parameters: {
             query?: {
-                q?: string;
-                department?: string;
-                role?: string;
-                min_risk?: number;
-                departing_within?: number;
-                sort?: string;
+                q?: string | null;
+                department?: string | null;
+                role?: string | null;
+                min_risk?: number | null;
                 limit?: number;
-                cursor?: string;
             };
             header?: never;
             path?: never;
@@ -1017,7 +1646,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1026,9 +1655,18 @@ export interface operations {
                     "application/json": components["schemas"]["UserListResponse"];
                 };
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
-    getUser: {
+    get_user_api_v1_users__user_id__get: {
         parameters: {
             query?: never;
             header?: never;
@@ -1039,32 +1677,31 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserProfile"];
+                    "application/json": components["schemas"]["UserDetailResponse"];
                 };
             };
-            /** @description Not found */
-            404: {
+            /** @description Validation Error */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    getUserRisk: {
+    get_user_risk_api_v1_users__user_id__risk_get: {
         parameters: {
             query?: {
-                date_from?: string;
-                date_to?: string;
-                include?: string;
+                date_from?: string | null;
+                date_to?: string | null;
             };
             header?: never;
             path: {
@@ -1074,18 +1711,27 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserRiskSeries"];
+                    "application/json": components["schemas"]["UserRiskResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    getUserTimeline: {
+    get_user_timeline_api_v1_users__user_id__timeline_get: {
         parameters: {
             query: {
                 date: string;
@@ -1098,32 +1744,39 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserTimeline"];
+                    "application/json": components["schemas"]["TimelineResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    listIncidents: {
+    list_incidents_api_v1_incidents_get: {
         parameters: {
             query?: {
-                lane?: string;
-                status?: string;
-                min_risk?: number;
-                min_confidence?: number;
-                user_id?: string;
-                date_from?: string;
-                date_to?: string;
-                stage_max?: number;
-                campaign_id?: string;
-                sort?: string;
+                lane?: string | null;
+                status?: string | null;
+                min_risk?: number | null;
+                min_confidence?: number | null;
+                user_id?: string | null;
+                date_from?: string | null;
+                date_to?: string | null;
+                stage_max?: number | null;
+                campaign_id?: string | null;
                 limit?: number;
-                cursor?: string;
             };
             header?: never;
             path?: never;
@@ -1131,7 +1784,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1140,9 +1793,18 @@ export interface operations {
                     "application/json": components["schemas"]["IncidentListResponse"];
                 };
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
-    getIncident: {
+    get_incident_api_v1_incidents__incident_id__get: {
         parameters: {
             query?: never;
             header?: never;
@@ -1153,27 +1815,27 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["IncidentDetail"];
+                    "application/json": components["schemas"]["IncidentDetailOut"];
                 };
             };
-            /** @description Not found */
-            404: {
+            /** @description Validation Error */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    getIncidentGraph: {
+    get_incident_graph_api_v1_incidents__incident_id__graph_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -1184,21 +1846,30 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["IncidentGraph"];
+                    "application/json": components["schemas"]["IncidentGraphOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    exportIncident: {
+    export_incident_api_v1_incidents__incident_id__export_get: {
         parameters: {
             query?: {
-                format?: "json" | "pdf";
+                format?: string;
             };
             header?: never;
             path: {
@@ -1208,18 +1879,27 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["EvidencePack"];
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    reviewIncident: {
+    review_incident_api_v1_incidents__incident_id__review_post: {
         parameters: {
             query?: {
                 force?: boolean;
@@ -1230,13 +1910,13 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: {
+        requestBody: {
             content: {
                 "application/json": components["schemas"]["ReviewRequest"];
             };
         };
         responses: {
-            /** @description Created */
+            /** @description Successful Response */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -1245,22 +1925,22 @@ export interface operations {
                     "application/json": components["schemas"]["ReviewResponse"];
                 };
             };
-            /** @description Conflict */
-            409: {
+            /** @description Validation Error */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    listCampaigns: {
+    list_campaigns_api_v1_campaigns_get: {
         parameters: {
             query?: {
-                user_id?: string;
-                min_stage?: number;
+                user_id?: string | null;
+                min_stage?: number | null;
                 limit?: number;
             };
             header?: never;
@@ -1269,7 +1949,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1278,9 +1958,18 @@ export interface operations {
                     "application/json": components["schemas"]["CampaignListResponse"];
                 };
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
-    getCampaign: {
+    get_campaign_api_v1_campaigns__campaign_id__get: {
         parameters: {
             query?: never;
             header?: never;
@@ -1291,18 +1980,27 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Campaign"];
+                    "application/json": components["schemas"]["CampaignDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    listRules: {
+    list_rules_api_v1_rules_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -1311,22 +2009,22 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RuleListResponse"];
+                    "application/json": components["schemas"]["RuleOut"][];
                 };
             };
         };
     };
-    getRuleStats: {
+    rule_stats_api_v1_rules__rule_id__stats_get: {
         parameters: {
             query?: {
-                date_from?: string;
-                date_to?: string;
+                date_from?: string | null;
+                date_to?: string | null;
             };
             header?: never;
             path: {
@@ -1336,18 +2034,27 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RuleStats"];
+                    "application/json": components["schemas"]["RuleStatsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    getDetectionHealth: {
+    detection_health_api_v1_detection_health_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -1356,21 +2063,21 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DetectionHealth"];
+                    "application/json": components["schemas"]["DetectionHealthOut"];
                 };
             };
         };
     };
-    getEvalReport: {
+    get_eval_report_api_v1_eval_report_get: {
         parameters: {
             query?: {
-                config_version?: string;
+                config_version?: string | null;
             };
             header?: never;
             path?: never;
@@ -1378,31 +2085,42 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["EvalReport"];
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    analyze: {
+    analyze_api_v1_analyze_post: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody?: {
+        requestBody: {
             content: {
                 "application/json": components["schemas"]["AnalyzeRequest"];
             };
         };
         responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1411,84 +2129,111 @@ export interface operations {
                     "application/json": components["schemas"]["AnalyzeResponse"];
                 };
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
-    login: {
+    ingest_api_v1_ingest_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
-        requestBody?: {
+        requestBody: {
             content: {
-                "application/json": components["schemas"]["LoginRequest"];
+                "application/json": components["schemas"]["IngestRequest"];
             };
         };
         responses: {
-            /** @description OK */
-            200: {
+            /** @description Successful Response */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LoginResponse"];
+                    "application/json": components["schemas"]["IngestRunOut"];
                 };
             };
-            /** @description Unauthorized */
-            401: {
+            /** @description Validation Error */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    logout: {
+    list_runs_api_v1_ingest_runs_get: {
         parameters: {
-            query?: never;
+            query?: {
+                status?: string | null;
+                limit?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description No content */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    getMe: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SessionUser"];
+                    "application/json": components["schemas"]["IngestRunSummary"][];
                 };
             };
-            /** @description Unauthorized */
-            401: {
+            /** @description Validation Error */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_run_api_v1_ingest_runs__run_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngestRunOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

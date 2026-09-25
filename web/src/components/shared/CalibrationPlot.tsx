@@ -3,7 +3,7 @@ import { CartesianGrid, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAx
 interface Bin {
   confidence_range?: number[];
   n?: number;
-  observed_precision?: number;
+  observed_precision?: number | null;
 }
 
 export function CalibrationPlot({ bins, ece }: { bins: Bin[]; ece?: number }) {

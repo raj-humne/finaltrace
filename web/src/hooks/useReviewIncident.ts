@@ -8,7 +8,7 @@ export function useReviewIncident(incidentId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (body: ReviewRequest) => {
-      const { data, error } = await api.POST("/incidents/{incident_id}/review", {
+      const { data, error } = await api.POST("/api/v1/incidents/{incident_id}/review", {
         params: { path: { incident_id: incidentId } },
         body,
       });

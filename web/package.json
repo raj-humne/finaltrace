@@ -7,7 +7,8 @@
     "dev": "vite",
     "server": "node server/index.js",
     "dev:all": "concurrently -n web,api -c blue,green \"npm:dev\" \"npm:server\"",
-    "generate:types": "openapi-typescript fixtures/openapi.json -o src/lib/api/types.gen.ts",
+    "generate:types": "openapi-typescript http://localhost:8000/api/v1/openapi.json -o src/lib/api/types.gen.ts",
+    "generate:types:fixture": "openapi-typescript fixtures/openapi.json -o src/lib/api/types.gen.ts",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview"

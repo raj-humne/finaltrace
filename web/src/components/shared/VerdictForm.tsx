@@ -9,7 +9,17 @@ const VERDICTS = [
   { value: "inconclusive", label: "Inconclusive" },
 ] as const;
 
-export function VerdictForm({ incidentId, closed, startedAt }: { incidentId: string; closed: boolean; startedAt: number }) {
+export function VerdictForm({
+  incidentId,
+  userId,
+  closed,
+  startedAt,
+}: {
+  incidentId: string;
+  userId: string;
+  closed: boolean;
+  startedAt: number;
+}) {
   const { user } = useAuth();
   const [verdict, setVerdict] = useState<(typeof VERDICTS)[number]["value"] | null>(null);
   const [note, setNote] = useState("");
@@ -23,11 +33,11 @@ export function VerdictForm({ incidentId, closed, startedAt }: { incidentId: str
     await mutation.mutateAsync({
       verdict,
       note,
-      analyst_id: user.analyst_id,
+      analyst_id: user.username,
       time_to_triage_sec: Math.round((Date.now() - startedAt) / 1000),
       propose_suppression:
         verdict === "benign" && proposeSuppression && ruleId
-          ? { scope: "user_rule", rule_id: ruleId, expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 180).toISOString() }
+          ? { scope: "user_rule", user_id: userId, rule_id: ruleId, expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 180).toISOString() }
           : null,
     });
   }

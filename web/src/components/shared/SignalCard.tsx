@@ -1,8 +1,8 @@
 import { cn } from "@/lib/utils";
 import type { components } from "@/lib/api/types.gen";
 
-type Signal = components["schemas"]["Signal"];
-type AttributionItem = components["schemas"]["AttributionItem"];
+type Signal = components["schemas"]["SignalDetailOut"];
+type AttributionItem = components["schemas"]["AttributionItemOut"];
 
 export function SignalCard({
   signal,
@@ -19,6 +19,16 @@ export function SignalCard({
 }) {
   const pts = attribution?.delta ?? Math.round((signal.contribution ?? 0) * 20 * 10) / 10;
   const withoutSignal = attribution?.risk_without ?? Math.max(0, risk - pts);
+  // `detail` is a free-form record (engine-specific per rule); Track A has
+  // not populated feature/observed/threshold/z_self on every signal yet, so
+  // treat each key as possibly absent rather than assuming the richer shape.
+  const detail = (signal.detail ?? {}) as Record<string, unknown>;
+  const asDisplay = (v: unknown): string | number | undefined =>
+    typeof v === "number" || typeof v === "string" ? v : undefined;
+  const feature = asDisplay(detail.feature);
+  const observed = asDisplay(detail.observed);
+  const threshold = asDisplay(detail.threshold);
+  const zSelf = asDisplay(detail.z_self);
   return (
     <button
       onClick={onSelect}
@@ -31,10 +41,10 @@ export function SignalCard({
         <div className="min-w-0">
           <span className="text-xs font-medium uppercase tracking-wide text-(--color-ink-muted)">{signal.category}</span>
           <p className="text-sm">{signal.phrase}</p>
-          {signal.detail && (signal.detail.observed != null || signal.detail.threshold != null) && (
+          {(observed != null || threshold != null) && (
             <p className="mt-0.5 font-mono-tab text-xs text-(--color-ink-muted)">
-              {signal.detail.feature} · observed {signal.detail.observed} · threshold {signal.detail.threshold}
-              {signal.detail.z_self != null ? ` · z ${signal.detail.z_self}` : ""}
+              {feature} · observed {observed} · threshold {threshold}
+              {zSelf != null ? ` · z ${zSelf}` : ""}
             </p>
           )}
         </div>

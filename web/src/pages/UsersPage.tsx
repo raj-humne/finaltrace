@@ -6,7 +6,10 @@ import { ErrorState } from "@/components/shared/EmptyState";
 
 export function UsersPage() {
   const [q, setQ] = useState("");
-  const { data, isLoading, isError } = useUsers({ q: q || undefined, sort: "-current_risk", limit: 200 });
+  const { data, isLoading, isError } = useUsers({ q: q || undefined, limit: 200 });
+  // The live API always returns user_id order and ignores `sort` (Track B,
+  // see api/routers/users.py), so sort by current risk client-side.
+  const items = (data?.items ?? []).slice().sort((a, b) => (b.current_risk ?? 0) - (a.current_risk ?? 0));
 
   return (
     <div className="flex flex-col gap-4">
@@ -35,7 +38,7 @@ export function UsersPage() {
               </tr>
             </thead>
             <tbody>
-              {(data?.items ?? []).map((u) => (
+              {items.map((u) => (
                 <tr key={u.user_id} className="border-b border-(--color-hairline) last:border-b-0 hover:bg-(--color-surface)">
                   <td className="px-4 py-2">
                     <Link to={`/users/${u.user_id}`} className="font-medium hover:underline">

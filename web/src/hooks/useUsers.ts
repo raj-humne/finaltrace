@@ -5,7 +5,7 @@ export function useUsers(params: { q?: string; department?: string; role?: strin
   return useQuery({
     queryKey: ["users", params],
     queryFn: async () => {
-      const { data, error } = await api.GET("/users", { params: { query: params } });
+      const { data, error } = await api.GET("/api/v1/users", { params: { query: params } });
       if (error) throw error;
       return data;
     },
@@ -16,7 +16,7 @@ export function useUser(userId: string | undefined) {
   return useQuery({
     queryKey: ["user", userId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/users/{user_id}", { params: { path: { user_id: userId! } } });
+      const { data, error } = await api.GET("/api/v1/users/{user_id}", { params: { path: { user_id: userId! } } });
       if (error) throw error;
       return data;
     },
@@ -28,7 +28,7 @@ export function useUserRisk(userId: string | undefined, dateFrom?: string, dateT
   return useQuery({
     queryKey: ["user-risk", userId, dateFrom, dateTo],
     queryFn: async () => {
-      const { data, error } = await api.GET("/users/{user_id}/risk", {
+      const { data, error } = await api.GET("/api/v1/users/{user_id}/risk", {
         params: { path: { user_id: userId! }, query: { date_from: dateFrom, date_to: dateTo } },
       });
       if (error) throw error;
@@ -42,7 +42,7 @@ export function useUserTimeline(userId: string | undefined, date: string | undef
   return useQuery({
     queryKey: ["user-timeline", userId, date],
     queryFn: async () => {
-      const { data, error } = await api.GET("/users/{user_id}/timeline", {
+      const { data, error } = await api.GET("/api/v1/users/{user_id}/timeline", {
         params: { path: { user_id: userId! }, query: { date: date! } },
       });
       if (error) throw error;
