@@ -110,6 +110,30 @@ class CertAdapter:
         "http": "http.csv", "email": "email.csv",
     }
 
+    # Boolean/numeric attrs that only one source populates. Left sparse, these
+    # come back NaN for every other source's rows once every chunk is
+    # concatenated into one frame - and pandas cannot hold NaN in a bool or
+    # int64 column, so it silently upcasts the whole 32M-row column to
+    # `object` (a ~28x memory blowup per column) to make room for it. That is
+    # exactly what exhausted memory on the full corpus (NFR-4, 4 GB): the
+    # union-of-sparse-columns concat needed one more allocation than the
+    # machine had headroom for. `_densify` gives every chunk the full,
+    # correctly-typed attr schema *before* concat so no column is ever forced
+    # to widen.
+    ATTR_DEFAULTS: dict[str, tuple[str, Any]] = {
+        "a_removable": ("bool", False),
+        "a_sensitive": ("bool", False),
+        "a_on_removable": ("bool", False),
+        "a_upload_shaped": ("bool", False),
+        "a_self_send": ("bool", False),
+        "a_recipient_count": ("int32", 0),
+        "a_external_count": ("int32", 0),
+        "a_bcc_external_count": ("int32", 0),
+        "a_size": ("int64", 0),
+        "a_attachments": ("int32", 0),
+        "a_attachment_bytes_external": ("int64", 0),
+    }
+
     def __init__(self, cfg: Config) -> None:
         self.cfg = cfg
         self.domains = DomainClassifier(cfg)
@@ -165,10 +189,18 @@ class CertAdapter:
             out["action"] = "open"
             out["a_extension"] = ext
             out["a_sensitive"] = ext.isin(self._sensitive)
-            out["a_on_removable"] = (
-                sub.get("to_removable_media", pd.Series("", index=keep))
-                .astype(str).str.strip().str.lower().isin({"true", "1", "yes"})
-            )
+            if "to_removable_media" in sub.columns:
+                out["a_on_removable"] = (
+                    sub["to_removable_media"].astype(str).str.strip().str.lower()
+                    .isin({"true", "1", "yes"})
+                )
+            else:
+                # Real CERT r4.2 file.csv carries no such column: per its
+                # readme, every row it records already IS a copy to
+                # removable media, so the flag is unconditionally true
+                # rather than silently absent (docs/08 FR: on_removable is
+                # required_for exfil.file_copy_to_usb).
+                out["a_on_removable"] = True
 
         elif source == "http":
             url = sub["url"].astype(str)
@@ -254,15 +286,32 @@ class CertAdapter:
                 )
 
 
+def _densify(frame: pd.DataFrame) -> pd.DataFrame:
+    """Fill in every source-sparse attr column so concat never upcasts one.
+
+    Only used on the bulk (`load_events`) path - `iter_events` shares the same
+    per-chunk `transform()` output but must keep it sparse, since `Event.attrs`
+    is documented as schemaless-per-source, not a dense union of every
+    source's fields.
+    """
+    for col, (dtype, default) in CertAdapter.ATTR_DEFAULTS.items():
+        if col in frame.columns:
+            frame[col] = frame[col].fillna(default).astype(dtype)
+        else:
+            frame[col] = pd.Series(default, index=frame.index, dtype=dtype)
+    return frame
+
+
 def load_events(raw_dir: Path, cfg: Config) -> tuple[pd.DataFrame, IngestReport]:
     """Read every source into one tidy events frame."""
     report = IngestReport()
     adapter = CertAdapter(cfg)
-    frames = list(adapter.read_frames(raw_dir, report))
+    frames = [_densify(f) for f in adapter.read_frames(raw_dir, report)]
     if not frames:
         return pd.DataFrame(), report
 
     df = pd.concat(frames, ignore_index=True)
+    del frames
 
     before = len(df)
     df = df.drop_duplicates(subset="event_id", keep="first")
@@ -271,6 +320,14 @@ def load_events(raw_dir: Path, cfg: Config) -> tuple[pd.DataFrame, IngestReport]
 
     df["date"] = df["ts"].dt.normalize()
     df = df.sort_values(["user_id", "ts"], kind="stable").reset_index(drop=True)
+
+    # Small-cardinality string columns: safe to compact now that concat has
+    # already succeeded (no forced-upcast risk left at this point).
+    for col in ("source", "action", "pc_id", "user_id", "a_domain", "a_category",
+                "a_extension"):
+        if col in df.columns:
+            df[col] = df[col].astype("category")
+
     return df, report
 
 
