@@ -99,8 +99,8 @@ def score_anomaly(features: pd.DataFrame, cfg: Config) -> pd.DataFrame:
         if train_pool.empty or not score_mask.any():
             continue
 
-        cohort_n = train_pool.groupby("cohort_key")["user_id"].nunique()
-        dept_n = train_pool.groupby("department")["user_id"].nunique()
+        cohort_n = train_pool.groupby("cohort_key", observed=True)["user_id"].nunique()
+        dept_n = train_pool.groupby("department", observed=True)["user_id"].nunique()
 
         train_group = _group_labels(train_pool, cohort_n, dept_n, min_cohort)
         score_group = _group_labels(out.loc[score_mask], cohort_n, dept_n, min_cohort)

@@ -88,7 +88,7 @@ def build_graph(events: pd.DataFrame,
     # Context neighbours: events within +/- neighbour_min of a signal event,
     # same user - keeps the neighbourhood meaningful and bounded.
     signal_events = ev[ev["event_id"].isin(signal_event_ids)]
-    for user, se in signal_events.groupby("user_id", sort=False):
+    for user, se in signal_events.groupby("user_id", sort=False, observed=True):
         pool = ev[ev["user_id"] == user]
         ts = pool["ts"].to_numpy()
         for t in se["ts"].to_numpy():

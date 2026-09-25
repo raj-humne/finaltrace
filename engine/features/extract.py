@@ -29,7 +29,7 @@ def _pair_sessions(frame: pd.DataFrame, open_action: str,
                                      "date", "inferred_end"])
     rows = []
     frame = frame.sort_values(["user_id", "pc_id", "ts"], kind="stable")
-    for (user, pc), grp in frame.groupby(["user_id", "pc_id"], sort=False):
+    for (user, pc), grp in frame.groupby(["user_id", "pc_id"], sort=False, observed=True):
         start = None
         for ts, action in zip(grp["ts"].to_numpy(), grp["action"].to_numpy()):
             if action == open_action:
@@ -96,7 +96,7 @@ def learn_working_windows(events: pd.DataFrame, cfg: Config) -> pd.DataFrame:
     lookback = pd.Timedelta(days=ww["lookback_days"])
 
     rows = []
-    for user, grp in events.groupby("user_id", sort=False):
+    for user, grp in events.groupby("user_id", sort=False, observed=True):
         ts = grp["ts"].to_numpy()
         minutes = (grp["ts"].dt.hour * 60 + grp["ts"].dt.minute).to_numpy()
         order = np.argsort(ts)
@@ -151,7 +151,7 @@ def build_features(events: pd.DataFrame, org: pd.DataFrame,
     keys = ["user_id", "date"]
 
     # -- base per-day aggregates ------------------------------------------
-    base = ev.groupby(keys).agg(
+    base = ev.groupby(keys, observed=True).agg(
         total_event_count=("event_id", "size"),
         first_activity_min=("minute", "min"),
         last_activity_min=("minute", "max"),
@@ -177,48 +177,48 @@ def build_features(events: pd.DataFrame, org: pd.DataFrame,
             sub = sub[sub["action"] == "connect"]
         if source == "logon":
             sub = sub[sub["action"] == "logon"]
-        agg = sub.groupby(keys).size().rename(col).reset_index()
+        agg = sub.groupby(keys, observed=True).size().rename(col).reset_index()
         feats = feats.merge(agg, on=keys, how="left")
 
     # -- device off-hours connects ------------------------------------------
     device_connects = ev[(ev["source"] == "device") & (ev["action"] == "connect")]
     if not device_connects.empty:
-        agg = (device_connects.groupby(keys)["offhours"].sum()
+        agg = (device_connects.groupby(keys, observed=True)["offhours"].sum()
                .rename("usb_offhours_connect_count").reset_index())
         feats = feats.merge(agg, on=keys, how="left")
 
     # -- http off-hours ratio ------------------------------------------------
     http_all = ev[ev["source"] == "http"]
     if not http_all.empty:
-        agg = (http_all.groupby(keys)["offhours"].sum()
+        agg = (http_all.groupby(keys, observed=True)["offhours"].sum()
                .rename("offhours_http_count").reset_index())
         feats = feats.merge(agg, on=keys, how="left")
 
     # -- logon features ----------------------------------------------------
     logons = ev[(ev["source"] == "logon") & (ev["action"] == "logon")]
     if not logons.empty:
-        agg = logons.groupby(keys).agg(
+        agg = logons.groupby(keys, observed=True).agg(
             after_hours_logon_count=("offhours", "sum"),
         ).reset_index()
         feats = feats.merge(agg, on=keys, how="left")
 
         # A user's "own" PC is the one they use most over the whole period.
-        modal = (logons.groupby(["user_id", "pc_id"]).size()
+        modal = (logons.groupby(["user_id", "pc_id"], observed=True).size()
                  .reset_index(name="n")
                  .sort_values("n", ascending=False)
                  .drop_duplicates("user_id")
                  .rename(columns={"pc_id": "own_pc"})[["user_id", "own_pc"]])
         logons = logons.merge(modal, on="user_id", how="left")
         logons["is_own"] = logons["pc_id"] == logons["own_pc"]
-        agg = logons.groupby(keys)["is_own"].mean().rename("own_pc_ratio").reset_index()
+        agg = logons.groupby(keys, observed=True)["is_own"].mean().rename("own_pc_ratio").reset_index()
         feats = feats.merge(agg, on=keys, how="left")
 
         # First-ever workstation use, per user, in time order.
         lg = logons.sort_values(["user_id", "ts"], kind="stable")
-        first_use = lg.groupby(["user_id", "pc_id"])["date"].transform("min")
+        first_use = lg.groupby(["user_id", "pc_id"], observed=True)["date"].transform("min")
         lg = lg.assign(is_new_pc=lg["date"] == first_use)
         new_pc = (lg[lg["is_new_pc"]].drop_duplicates(["user_id", "pc_id"])
-                  .groupby(keys).size().rename("new_pc_count").reset_index())
+                  .groupby(keys, observed=True).size().rename("new_pc_count").reset_index())
         feats = feats.merge(new_pc, on=keys, how="left")
     else:
         modal = pd.DataFrame(columns=["user_id", "own_pc"])
@@ -232,12 +232,12 @@ def build_features(events: pd.DataFrame, org: pd.DataFrame,
         "connect", "disconnect")
 
     if not sessions.empty:
-        agg = sessions.groupby(["user_id", "date"]).agg(
+        agg = sessions.groupby(["user_id", "date"], observed=True).agg(
             max_session_duration_min=("duration_min", "max")).reset_index()
         feats = feats.merge(agg, on=["user_id", "date"], how="left")
 
     if not usb.empty:
-        agg = usb.groupby(["user_id", "date"]).agg(
+        agg = usb.groupby(["user_id", "date"], observed=True).agg(
             usb_session_total_min=("duration_min", "sum")).reset_index()
         feats = feats.merge(agg, on=["user_id", "date"], how="left")
 
@@ -245,12 +245,12 @@ def build_features(events: pd.DataFrame, org: pd.DataFrame,
         if not modal.empty:
             u = usb.merge(modal, on="user_id", how="left")
             u["foreign"] = u["pc_id"] != u["own_pc"]
-            agg = (u.groupby(["user_id", "date"])["foreign"].any()
+            agg = (u.groupby(["user_id", "date"], observed=True)["foreign"].any()
                    .rename("usb_on_foreign_pc").reset_index())
             feats = feats.merge(agg, on=["user_id", "date"], how="left")
 
         # First-ever USB use, and dormancy since the last one.
-        usb_days = (usb.groupby("user_id")["date"].apply(lambda s: sorted(set(s)))
+        usb_days = (usb.groupby("user_id", observed=True)["date"].apply(lambda s: sorted(set(s)))
                     .to_dict())
         first_rows, dormancy_rows = [], []
         for user, days in usb_days.items():
@@ -275,7 +275,7 @@ def build_features(events: pd.DataFrame, org: pd.DataFrame,
         # bool/int object column that breaks any typed sink (Parquet, the
         # DB). Cast to int on the filtered (NaN-free) subset first.
         files["a_sensitive"] = files["a_sensitive"].astype(bool).astype(int)
-        agg = files.groupby(keys).agg(
+        agg = files.groupby(keys, observed=True).agg(
             distinct_file_count=("a_filename", "nunique")
             if "a_filename" in files.columns else ("event_id", "nunique"),
             distinct_extension_count=("a_extension", "nunique"),
@@ -287,8 +287,8 @@ def build_features(events: pd.DataFrame, org: pd.DataFrame,
         # strongest exfiltration primitive in the whole feature set.
         if not usb.empty:
             during = []
-            usb_by_user = {u: g for u, g in usb.groupby("user_id", sort=False)}
-            for (user, day), grp in files.groupby(keys, sort=False):
+            usb_by_user = {u: g for u, g in usb.groupby("user_id", sort=False, observed=True)}
+            for (user, day), grp in files.groupby(keys, sort=False, observed=True):
                 sess = usb_by_user.get(user)
                 if sess is None:
                     continue
@@ -307,7 +307,7 @@ def build_features(events: pd.DataFrame, org: pd.DataFrame,
 
         # Largest burst of file activity inside any ten-minute span.
         bursts = []
-        for (user, day), grp in files.groupby(keys, sort=False):
+        for (user, day), grp in files.groupby(keys, sort=False, observed=True):
             t = np.sort(grp["ts"].to_numpy())
             if len(t) < 2:
                 bursts.append((user, day, len(t)))
@@ -321,24 +321,24 @@ def build_features(events: pd.DataFrame, org: pd.DataFrame,
 
         # File extensions never previously used by this user.
         fl = files.sort_values(["user_id", "ts"], kind="stable")
-        first_ext = fl.groupby(["user_id", "a_extension"])["date"].transform("min")
+        first_ext = fl.groupby(["user_id", "a_extension"], observed=True)["date"].transform("min")
         fl = fl.assign(is_new=fl["date"] == first_ext)
         new_ext = (fl[fl["is_new"]].drop_duplicates(["user_id", "a_extension"])
-                   .groupby(keys).size().rename("new_extension_count").reset_index())
+                   .groupby(keys, observed=True).size().rename("new_extension_count").reset_index())
         feats = feats.merge(new_ext, on=keys, how="left")
 
     # -- http features -----------------------------------------------------
     http = ev[ev["source"] == "http"].copy()
     if not http.empty:
         http["a_upload_shaped"] = http["a_upload_shaped"].astype(bool).astype(int)
-        agg = http.groupby(keys).agg(
+        agg = http.groupby(keys, observed=True).agg(
             distinct_domain_count=("a_domain", "nunique"),
             upload_shaped_count=("a_upload_shaped", "sum"),
         ).reset_index()
         feats = feats.merge(agg, on=keys, how="left")
 
         cats = (http.pivot_table(index=keys, columns="a_category",
-                                 values="event_id", aggfunc="size")
+                                 values="event_id", aggfunc="size", observed=True)
                 .reset_index())
         rename = {"job_search": "job_search_visits",
                   "cloud_storage": "cloud_storage_visits",
@@ -350,17 +350,17 @@ def build_features(events: pd.DataFrame, org: pd.DataFrame,
         feats = feats.merge(cats[wanted], on=keys, how="left")
 
         hl = http.sort_values(["user_id", "ts"], kind="stable")
-        first_dom = hl.groupby(["user_id", "a_domain"])["date"].transform("min")
+        first_dom = hl.groupby(["user_id", "a_domain"], observed=True)["date"].transform("min")
         hl = hl.assign(is_new=hl["date"] == first_dom)
         new_dom = (hl[hl["is_new"]].drop_duplicates(["user_id", "a_domain"])
-                   .groupby(keys).size().rename("new_domain_count").reset_index())
+                   .groupby(keys, observed=True).size().rename("new_domain_count").reset_index())
         feats = feats.merge(new_dom, on=keys, how="left")
 
     # -- email features ----------------------------------------------------
     email = ev[ev["source"] == "email"].copy()
     if not email.empty:
         email["a_self_send"] = email["a_self_send"].astype(bool).astype(int)
-        agg = email.groupby(keys).agg(
+        agg = email.groupby(keys, observed=True).agg(
             external_recipient_count=("a_external_count", "sum"),
             self_send_count=("a_self_send", "sum"),
             attachment_count=("a_attachments", "sum"),
@@ -374,8 +374,8 @@ def build_features(events: pd.DataFrame, org: pd.DataFrame,
     if not sessions.empty:
         non_logon = ev[ev["source"] != "logon"]
         outside = []
-        sess_by_user = {u: g for u, g in sessions.groupby("user_id", sort=False)}
-        for (user, day), grp in non_logon.groupby(keys, sort=False):
+        sess_by_user = {u: g for u, g in sessions.groupby("user_id", sort=False, observed=True)}
+        for (user, day), grp in non_logon.groupby(keys, sort=False, observed=True):
             s = sess_by_user.get(user)
             if s is None:
                 outside.append((user, day, len(grp)))
@@ -405,7 +405,7 @@ def build_features(events: pd.DataFrame, org: pd.DataFrame,
     def _first_ts_by_day(frame: pd.DataFrame) -> dict:
         if frame.empty:
             return {}
-        g = frame.groupby(keys)["ts"].min()
+        g = frame.groupby(keys, observed=True)["ts"].min()
         return g.to_dict()
 
     def _gap_after(from_map: dict, to_frame: pd.DataFrame, out_name: str) -> pd.DataFrame:
@@ -414,7 +414,7 @@ def build_features(events: pd.DataFrame, org: pd.DataFrame,
         rows = []
         if not from_map or to_frame.empty:
             return pd.DataFrame(columns=["user_id", "date", out_name])
-        to_by_key = {k: g["ts"].to_numpy() for k, g in to_frame.groupby(keys, sort=False)}
+        to_by_key = {k: g["ts"].to_numpy() for k, g in to_frame.groupby(keys, sort=False, observed=True)}
         for key, anchor in from_map.items():
             candidates = to_by_key.get(key)
             if candidates is None:
@@ -491,19 +491,19 @@ def build_features(events: pd.DataFrame, org: pd.DataFrame,
     # exists in CERT). Peer cohort size: how many members of this user's
     # cohort were active on this same date - a small cohort weakens the
     # peer baseline, and this is what lets confidence reflect that.
-    first_seen = ev.groupby("user_id")["date"].min().rename("first_seen")
+    first_seen = ev.groupby("user_id", observed=True)["date"].min().rename("first_seen")
     feats = feats.merge(first_seen, on="user_id", how="left")
     feats["tenure_days"] = (pd.to_datetime(feats["date"])
                             - pd.to_datetime(feats["first_seen"])).dt.days
     feats = feats.drop(columns=["first_seen"])
 
     feats["peer_cohort_size"] = (
-        feats.groupby(["cohort_key", "date"])["user_id"].transform("nunique"))
+        feats.groupby(["cohort_key", "date"], observed=True)["user_id"].transform("nunique"))
 
     # Mass-email flag: recipients above this cohort's p99 on this date, cross-
     # sectional over cohort members with at least peer_min_cohort data points.
     peer_min = cfg.baseline["peer_min_cohort"]
-    p99 = (feats.groupby(["cohort_key", "date"])["max_recipients_single_email"]
+    p99 = (feats.groupby(["cohort_key", "date"], observed=True)["max_recipients_single_email"]
            .transform(lambda s: s.quantile(0.99) if len(s) >= peer_min else np.inf))
     feats["mass_email_flag"] = feats["max_recipients_single_email"] > p99
 
@@ -554,13 +554,13 @@ def build_features(events: pd.DataFrame, org: pd.DataFrame,
     feats = feats.sort_values(["user_id", "date"], kind="stable")
     feats["_js_day"] = (feats["job_search_visits"] > 0).astype(int)
     feats["job_search_days_trailing14"] = (
-        feats.groupby("user_id")["_js_day"]
+        feats.groupby("user_id", observed=True)["_js_day"]
         .transform(lambda s: s.rolling(14, min_periods=1).sum()))
     feats = feats.drop(columns=["_js_day"])
 
     # Data completeness feeds confidence: missing sources lower certainty,
     # they never silently lower risk.
-    present = ev.groupby(keys)["source"].nunique().rename("sources_present").reset_index()
+    present = ev.groupby(keys, observed=True)["source"].nunique().rename("sources_present").reset_index()
     feats = feats.merge(present, on=keys, how="left")
     feats["data_completeness"] = feats["sources_present"].fillna(0) / len(
         cfg.features["sources"])

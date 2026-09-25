@@ -171,7 +171,7 @@ def detect_signals(features: pd.DataFrame, events: pd.DataFrame,
 
     events_by_day: dict[tuple[str, date_type], pd.DataFrame] = {}
     if events is not None and not events.empty:
-        for key, grp in events.groupby(["user_id", "date"], sort=False):
+        for key, grp in events.groupby(["user_id", "date"], sort=False, observed=True):
             user_id, ts = key
             events_by_day[(user_id, pd.Timestamp(ts).date())] = grp
 

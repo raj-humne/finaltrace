@@ -187,6 +187,7 @@ class CertAdapter:
             ext = name.str.rsplit(".", n=1).str[-1].str.lower()
             ext = ext.where(name.str.contains(".", regex=False), "")
             out["action"] = "open"
+            out["a_filename"] = name
             out["a_extension"] = ext
             out["a_sensitive"] = ext.isin(self._sensitive)
             if "to_removable_media" in sub.columns:

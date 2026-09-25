@@ -20,6 +20,8 @@ to hide the next one (docs/03-DATA-MODEL.md section 4.9).
 """
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
 import pandas as pd
 
@@ -31,6 +33,54 @@ def _mad(x: np.ndarray) -> float:
     return float(np.median(np.abs(x - med)))
 
 
+def _rolling_median_mad_trailing(values: np.ndarray, day_num: np.ndarray,
+                                 window_days: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Vectorised trailing calendar-window median, MAD and count.
+
+    Equivalent to `pd.Series(values, index=dates).rolling(f"{window_days}D",
+    closed="left")` paired with `.median()` / `.apply(_mad)` / `.count()`, but
+    computed without a Python callback per row: pandas' `.rolling().apply()`
+    invokes `_mad` once per (user, feature, day) - for the full corpus that is
+    on the order of 1000 users x 22 baselined features x ~370 days each,
+    i.e. several million individual Python calls, which is what made a single
+    baseline pass take upwards of an hour. Every row's trailing window here
+    holds at most `window_days` observed days (since `values`/`day_num` are
+    one row per day with activity, never a dense daily calendar), so all
+    windows fit in one small (n, W) matrix and are reduced with two
+    vectorised `np.nanmedian` calls instead of n per-row Python calls.
+
+    `values`, `day_num` must already be sorted ascending by date.
+    """
+    n = len(values)
+    if n == 0:
+        empty = np.array([])
+        return empty, empty, empty
+
+    cutoff = day_num - window_days
+    lo = np.searchsorted(day_num, cutoff, side="left")
+    hi = np.arange(n)  # window excludes the current row itself (closed="left")
+    counts = hi - lo
+    width = int(counts.max()) if n else 0
+    if width == 0:
+        nan_arr = np.full(n, np.nan)
+        return nan_arr, nan_arr, counts.astype(float)
+
+    mat = np.full((n, width), np.nan)
+    for w in range(width):
+        idx = hi - 1 - w
+        valid = idx >= lo
+        mat[valid, w] = values[idx[valid]]
+
+    with warnings.catch_warnings():
+        # Rows with zero prior days (warm-up) are all-NaN by construction;
+        # NaN out is correct there, same as the pandas .rolling().median()
+        # this replaces - just without numpy's per-call warning noise.
+        warnings.filterwarnings("ignore", message="All-NaN slice encountered")
+        med = np.nanmedian(mat, axis=1)
+        mad = np.nanmedian(np.abs(mat - med[:, None]), axis=1)
+    return med, mad, counts.astype(float)
+
+
 def compute_self_baseline(feats: pd.DataFrame, cfg: Config) -> pd.DataFrame:
     """Add `{feature}__z_self` plus `baseline_days` and `baseline_maturity`.
 
@@ -38,7 +88,7 @@ def compute_self_baseline(feats: pd.DataFrame, cfg: Config) -> pd.DataFrame:
     computed from a rolling window that excludes the scored day itself.
     """
     b = cfg.baseline
-    window = f"{b['self_window_days']}D"
+    window_days = int(b["self_window_days"])
     mad_scale = b["mad_scale"]
     eps = b["epsilon"]
     features = cfg.features["baselined_features"]
@@ -50,17 +100,16 @@ def compute_self_baseline(feats: pd.DataFrame, cfg: Config) -> pd.DataFrame:
         out[f"{feat}__z_self"] = np.nan
 
     maturity_parts: list[pd.Series] = []
-    for _, grp in out.groupby("user_id", sort=False):
-        ts_index = pd.DatetimeIndex(grp["date"].to_numpy())
+    for _, grp in out.groupby("user_id", sort=False, observed=True):
+        day_num = grp["date"].to_numpy().astype("datetime64[D]").astype(np.int64)
         for feat in features:
-            s = pd.Series(grp[feat].to_numpy(dtype=float), index=ts_index)
-            med = s.rolling(window, closed="left").median()
-            mad = s.rolling(window, closed="left").apply(_mad, raw=True)
-            z = (s.to_numpy() - med.to_numpy()) / (mad_scale * mad.to_numpy() + eps)
+            vals = grp[feat].to_numpy(dtype=float)
+            med, mad, _ = _rolling_median_mad_trailing(vals, day_num, window_days)
+            z = (vals - med) / (mad_scale * mad + eps)
             out.loc[grp.index, f"{feat}__z_self"] = z
-        cnt = pd.Series(np.ones(len(grp)), index=ts_index).rolling(
-            window, closed="left").count()
-        maturity_parts.append(pd.Series(cnt.to_numpy(), index=grp.index))
+        _, _, cnt = _rolling_median_mad_trailing(
+            np.zeros(len(grp)), day_num, window_days)
+        maturity_parts.append(pd.Series(cnt, index=grp.index))
 
     baseline_days = pd.concat(maturity_parts).sort_index()
     out["baseline_days"] = baseline_days.fillna(0).astype(int)
@@ -87,8 +136,8 @@ def compute_peer_baseline(feats: pd.DataFrame, cfg: Config) -> pd.DataFrame:
     out["date"] = pd.to_datetime(out["date"])
     date_str = out["date"].dt.strftime("%Y-%m-%d")
 
-    cohort_size = out.groupby(["cohort_key", "date"])["user_id"].transform("nunique")
-    dept_size = out.groupby(["department", "date"])["user_id"].transform("nunique")
+    cohort_size = out.groupby(["cohort_key", "date"], observed=True)["user_id"].transform("nunique")
+    dept_size = out.groupby(["department", "date"], observed=True)["user_id"].transform("nunique")
 
     use_cohort = cohort_size >= min_cohort
     use_dept = (~use_cohort) & (dept_size >= min_cohort)
@@ -101,12 +150,16 @@ def compute_peer_baseline(feats: pd.DataFrame, cfg: Config) -> pd.DataFrame:
     out["_peer_group"] = group_key
 
     for feat in features:
-        grouped = out.groupby("_peer_group")[feat]
+        grouped = out.groupby("_peer_group", observed=True)[feat]
         median = grouped.transform("median")
-        mad = grouped.transform(lambda s: _mad(s.to_numpy(dtype=float)))
+        # MAD = median(|x - group median|). Both steps use pandas' built-in
+        # (C-level) "median" transform rather than a custom Python lambda -
+        # same result, no per-group Python callback.
+        mad = (out[feat] - median).abs().groupby(
+            out["_peer_group"], observed=True).transform("median")
         out[f"{feat}__z_peer"] = (out[feat] - median) / (mad_scale * mad + eps)
 
-    out["peer_cohort_size_effective"] = out.groupby("_peer_group")["user_id"].transform(
+    out["peer_cohort_size_effective"] = out.groupby("_peer_group", observed=True)["user_id"].transform(
         "nunique")
     out = out.drop(columns=["_peer_group"])
     return out
