@@ -6,6 +6,20 @@ source pair, docs section 6.2), shared PC and shared file (cross-user, for
 lateral movement), and stage-advance (the kill-chain progression correlation
 exists to reward). NetworkX computes connected components server-side
 (docs/02-ARCHITECTURE.md section 11); the client only renders.
+
+Deviation from the docs section 6.1 pseudocode, flagged rather than silently
+"corrected": the pseudocode's `temporal` and `stage_advance` edges carry no
+same-user guard, but FR-4.3 scopes cross-user correlation to exactly
+`shared_pc`/`shared_file` ("lateral movement"), and every reasoning example
+in docs section 6.2 and the PRD 1.1 walkthrough is a single person's session.
+Taken literally, an unguarded temporal edge connects any two employees who
+happen to act within a few hours of each other - on real data this collapses
+almost the entire signal-bearing population into one connected component
+per day (empirically ~70K nodes, components up to 3,850, on the synthetic
+fixture), which starves every genuine incident of a correlation bonus via
+`over_dense`. This implementation restricts `temporal` and `stage_advance`
+to same-user pairs; cross-user connectivity still exists, but only through
+the two edge types the spec explicitly designed for it.
 """
 from __future__ import annotations
 
@@ -52,11 +66,6 @@ def _event_signal_maps(
     return stage_of, category_of, signals_of
 
 
-def _same_file(a: pd.Series, b: pd.Series) -> bool:
-    fa, fb = a.get("filename"), b.get("filename")
-    return bool(fa) and bool(fb) and fa == fb
-
-
 def build_graph(events: pd.DataFrame,
                 signals_by_day: dict[tuple[str, date_type], list[Signal]],
                 cfg: Config) -> EventGraph:
@@ -96,36 +105,58 @@ def build_graph(events: pd.DataFrame,
                   category=category_of.get(row.event_id),
                   is_signal=row.event_id in signal_event_ids)
 
+    # Plain numpy arrays, not per-row pandas indexing: with tens of thousands
+    # of candidate nodes the .iloc-per-pair version is dominated by pandas
+    # call overhead rather than the arithmetic itself.
     ts_arr = nodes["ts"].to_numpy()
+    event_id_arr = nodes["event_id"].to_numpy()
+    user_arr = nodes["user_id"].to_numpy()
+    pc_arr = nodes["pc_id"].to_numpy()
+    source_arr = nodes["source"].to_numpy()
+    filename_arr = nodes["filename"].to_numpy()
+    stage_arr = np.array([stage_of.get(e) for e in event_id_arr], dtype=object)
+
     scan_limit = np.timedelta64(_MAX_SCAN_MINUTES, "m")
     n = len(nodes)
+    edges: list[tuple[str, str, str, float, int]] = []
     for i in range(n):
-        a = nodes.iloc[i]
         # Sorted by ts: once the gap exceeds the widest possible window, every
         # later j is farther still - stop scanning this row.
-        j_end = np.searchsorted(ts_arr, ts_arr[i] + scan_limit, side="right")
-        for j in range(i + 1, min(j_end, n)):
-            b = nodes.iloc[j]
-            gap_min = (b["ts"] - a["ts"]).total_seconds() / 60.0
+        j_end = int(np.searchsorted(ts_arr, ts_arr[i] + scan_limit, side="right"))
+        if j_end <= i + 1:
+            continue
 
-            window = cfg.pair_window_min(a["source"], b["source"])
-            if gap_min <= window:
-                w = math.exp(-gap_min / window) if window > 0 else 1.0
-                g.add_edge(a["event_id"], b["event_id"], type="temporal", weight=w,
-                          gap_seconds=int(round(gap_min * 60)))
+        gap_min = (ts_arr[i + 1:j_end] - ts_arr[i]) / np.timedelta64(1, "m")
+        window_min = np.array(
+            [cfg.pair_window_min(source_arr[i], s) for s in source_arr[i + 1:j_end]])
+        same_pc = (pc_arr[i + 1:j_end] == pc_arr[i]) & (pc_arr[i] not in (None, ""))
+        diff_user = user_arr[i + 1:j_end] != user_arr[i]
+        same_user = ~diff_user
+        same_file = (filename_arr[i + 1:j_end] == filename_arr[i]) & (
+            filename_arr[i] not in (None, ""))
+        stage_i = stage_arr[i]
+        stage_advance = np.array([
+            stage_i is not None and s is not None and s == stage_i + 1
+            for s in stage_arr[i + 1:j_end]])
 
-            if a["pc_id"] and a["pc_id"] == b["pc_id"] and a["user_id"] != b["user_id"]:
-                g.add_edge(a["event_id"], b["event_id"], type="shared_pc", weight=0.8,
-                          gap_seconds=int(round(gap_min * 60)))
+        for offset in range(j_end - i - 1):
+            j = i + 1 + offset
+            gm = float(gap_min[offset])
+            gap_seconds = int(round(gm * 60))
+            eid_a, eid_b = event_id_arr[i], event_id_arr[j]
 
-            if _same_file(a, b) and a["user_id"] != b["user_id"]:
-                g.add_edge(a["event_id"], b["event_id"], type="shared_file", weight=0.9,
-                          gap_seconds=int(round(gap_min * 60)))
+            if same_user[offset] and gm <= window_min[offset]:
+                w = math.exp(-gm / window_min[offset]) if window_min[offset] > 0 else 1.0
+                edges.append((eid_a, eid_b, "temporal", w, gap_seconds))
+            if same_pc[offset] and diff_user[offset]:
+                edges.append((eid_a, eid_b, "shared_pc", 0.8, gap_seconds))
+            if same_file[offset] and diff_user[offset]:
+                edges.append((eid_a, eid_b, "shared_file", 0.9, gap_seconds))
+            if same_user[offset] and stage_advance[offset]:
+                edges.append((eid_a, eid_b, "stage_advance", 1.0, gap_seconds))
 
-            stage_a, stage_b = stage_of.get(a["event_id"]), stage_of.get(b["event_id"])
-            if stage_a is not None and stage_b is not None and stage_b == stage_a + 1:
-                g.add_edge(a["event_id"], b["event_id"], type="stage_advance", weight=1.0,
-                          gap_seconds=int(round(gap_min * 60)))
+    for eid_a, eid_b, edge_type, weight, gap_seconds in edges:
+        g.add_edge(eid_a, eid_b, type=edge_type, weight=weight, gap_seconds=gap_seconds)
 
     return EventGraph(graph=g, event_stage=stage_of, event_category=category_of,
                       event_to_signals=signals_of)
