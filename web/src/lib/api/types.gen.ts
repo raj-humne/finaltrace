@@ -242,6 +242,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/incidents/{incident_id}/ask": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask About Incident
+         * @description Grounded Q&A over one incident's already-computed evidence (ADR 0004's
+         *     "optional v2 gloss" - never the authoritative record, which stays the
+         *     deterministic narrative). Failures degrade to a clear 503, never a 500 -
+         *     a flaky external call must not take down the incident page the rest of
+         *     the demo depends on.
+         */
+        post: operations["ask_about_incident_api_v1_incidents__incident_id__ask_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/incidents/{incident_id}/export": {
         parameters: {
             query?: never;
@@ -539,6 +563,21 @@ export interface components {
             daily: components["schemas"]["AnalyzeDailyPoint"][];
             /** Narrative */
             narrative: string | null;
+        };
+        /** AskRequest */
+        AskRequest: {
+            /** Question */
+            question: string;
+        };
+        /** AskResponse */
+        AskResponse: {
+            /** Answer */
+            answer: string;
+            /**
+             * Disclaimer
+             * @default AI assistant - grounded only in this incident's stored evidence. Not the audited record; see the narrative above for that.
+             */
+            disclaimer: string;
         };
         /** AttributionItemOut */
         AttributionItemOut: {
@@ -1853,6 +1892,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IncidentGraphOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ask_about_incident_api_v1_incidents__incident_id__ask_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incident_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AskRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AskResponse"];
                 };
             };
             /** @description Validation Error */
