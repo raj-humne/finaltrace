@@ -114,7 +114,25 @@ def build_graph(events: pd.DataFrame,
     pc_arr = nodes["pc_id"].to_numpy()
     source_arr = nodes["source"].to_numpy()
     filename_arr = nodes["filename"].to_numpy()
-    stage_arr = np.array([stage_of.get(e) for e in event_id_arr], dtype=object)
+    # float + NaN, not dtype=object: lets stage comparisons below run as a
+    # single vectorised numpy op instead of an elementwise Python-level
+    # comparison per candidate pair. NaN != anything (including itself), so
+    # an absent stage naturally compares False everywhere, same as None did.
+    stage_arr = np.array(
+        [np.nan if stage_of.get(e) is None else stage_of.get(e) for e in event_id_arr],
+        dtype=float)
+
+    # Precompute the tiny (5x5) source-pair -> window-minutes lookup once.
+    # cfg.pair_window_min() does a sort + two dict lookups per call; called
+    # once per *candidate pair* inside the scan below (a 24h lookahead per
+    # node) that was millions of Python-level calls even on a small slice -
+    # the actual cause of the correlation stage hanging. A handful of
+    # sources means the whole table is a few dozen values, looked up here
+    # with vectorised numpy indexing instead of a per-pair function call.
+    sources_uniq, source_codes = np.unique(source_arr, return_inverse=True)
+    window_matrix = np.array([
+        [cfg.pair_window_min(a, b) for b in sources_uniq] for a in sources_uniq
+    ])
 
     scan_limit = np.timedelta64(_MAX_SCAN_MINUTES, "m")
     n = len(nodes)
@@ -127,32 +145,44 @@ def build_graph(events: pd.DataFrame,
             continue
 
         gap_min = (ts_arr[i + 1:j_end] - ts_arr[i]) / np.timedelta64(1, "m")
-        window_min = np.array(
-            [cfg.pair_window_min(source_arr[i], s) for s in source_arr[i + 1:j_end]])
+        window_min = window_matrix[source_codes[i], source_codes[i + 1:j_end]]
         same_pc = (pc_arr[i + 1:j_end] == pc_arr[i]) & (pc_arr[i] not in (None, ""))
         diff_user = user_arr[i + 1:j_end] != user_arr[i]
         same_user = ~diff_user
         same_file = (filename_arr[i + 1:j_end] == filename_arr[i]) & (
             filename_arr[i] not in (None, ""))
-        stage_i = stage_arr[i]
-        stage_advance = np.array([
-            stage_i is not None and s is not None and s == stage_i + 1
-            for s in stage_arr[i + 1:j_end]])
+        stage_advance = stage_arr[i + 1:j_end] == (stage_arr[i] + 1)
 
-        for offset in range(j_end - i - 1):
+        # Fully vectorised: a plain Python `for offset in range(...)` here
+        # was the other half of what made this stage hang - it re-examined
+        # every candidate pair in a 24h lookahead window one at a time, even
+        # though most pairs match none of the four edge criteria. Compute
+        # all four boolean masks at once, then only iterate the (usually
+        # much smaller) set of offsets where at least one is true.
+        temporal_mask = same_user & (gap_min <= window_min)
+        shared_pc_mask = same_pc & diff_user
+        shared_file_mask = same_file & diff_user
+        stage_adv_mask = same_user & stage_advance
+        any_edge = temporal_mask | shared_pc_mask | shared_file_mask | stage_adv_mask
+
+        if not any_edge.any():
+            continue
+
+        for offset in np.nonzero(any_edge)[0]:
             j = i + 1 + offset
             gm = float(gap_min[offset])
             gap_seconds = int(round(gm * 60))
             eid_a, eid_b = event_id_arr[i], event_id_arr[j]
 
-            if same_user[offset] and gm <= window_min[offset]:
-                w = math.exp(-gm / window_min[offset]) if window_min[offset] > 0 else 1.0
+            if temporal_mask[offset]:
+                wmin = window_min[offset]
+                w = math.exp(-gm / wmin) if wmin > 0 else 1.0
                 edges.append((eid_a, eid_b, "temporal", w, gap_seconds))
-            if same_pc[offset] and diff_user[offset]:
+            if shared_pc_mask[offset]:
                 edges.append((eid_a, eid_b, "shared_pc", 0.8, gap_seconds))
-            if same_file[offset] and diff_user[offset]:
+            if shared_file_mask[offset]:
                 edges.append((eid_a, eid_b, "shared_file", 0.9, gap_seconds))
-            if same_user[offset] and stage_advance[offset]:
+            if stage_adv_mask[offset]:
                 edges.append((eid_a, eid_b, "stage_advance", 1.0, gap_seconds))
 
     for eid_a, eid_b, edge_type, weight, gap_seconds in edges:
