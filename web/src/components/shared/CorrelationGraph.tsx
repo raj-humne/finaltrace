@@ -140,6 +140,12 @@ export function CorrelationGraph({ nodes, edges, selectedId, onSelect, overDense
           n.fy = undefined;
         });
         fg.d3ReheatSimulation();
+        // Without this the camera stays framed on the previous (temporal)
+        // layout's tight bounding box - the force simulation spreads nodes
+        // out over its cooldownTicks, but nothing ever re-frames the view to
+        // follow them, so only whatever corner they started in stays visible.
+        // cooldownTicks is 100 in force mode; give it a beat to settle first.
+        setTimeout(() => fg.zoomToFit(300, 24), 300);
       }
     },
     [graphData, pinTemporalPositions]
