@@ -38,9 +38,9 @@ from api.models.ingest import Event, IngestRun
 
 from engine.core.config import load_config
 from engine.correlate.incident import Incident as EngineIncident
-from engine.explain.counterfactual import counterfactual_deltas
+from engine.explain.counterfactual import counterfactual_deltas, minimal_sufficient_set
 from engine.explain.narrative import build_narrative
-from engine.detect.scoring import CorrelationInputs
+from engine.detect.scoring import CorrelationInputs, compute_risk
 from engine.run import Pipeline
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -84,10 +84,16 @@ def _persist_users_and_org(db: Session, org: pd.DataFrame, events: pd.DataFrame)
             ),
         ))
         if o is not None:
+            # valid_to is exclusive (docs/03-DATA-MODEL section 5): it must be
+            # strictly after the last day this org record applies, or a lookup
+            # for "the org as of this user's last_seen date" (api/routers/users.py
+            # _current_org, called with as_of=last_seen) always misses - the
+            # interval [valid_from, last_seen) does not contain last_seen itself.
+            last_seen_date = pd.Timestamp(ls).date() if pd.notna(ls) else dt.date(2010, 1, 1)
             db.merge(UserOrg(
                 user_id=uid,
                 valid_from=(pd.Timestamp(fs).date() if pd.notna(fs) else dt.date(2010, 1, 1)),
-                valid_to=(pd.Timestamp(ls).date() if pd.notna(ls) else dt.date(2099, 1, 1)),
+                valid_to=last_seen_date + dt.timedelta(days=1),
                 role=str(o.get("role") or "unknown"),
                 department=str(o.get("department") or "unknown"),
                 team=None,
@@ -165,6 +171,21 @@ def _persist_incidents(db: Session, pipeline: Pipeline, config_version: str,
     node_ts = {n: d["ts"] for n, d in pipeline.graph.graph.nodes(data=True)} if pipeline.graph else {}
     node_role_signal = {n: d.get("is_signal", False) for n, d in pipeline.graph.graph.nodes(data=True)} if pipeline.graph else {}
 
+    # Campaigns must exist before any Incident referencing one via campaign_id
+    # (a FK) is flushed. They used to be inserted in a loop after this one,
+    # which worked only because nothing forced a flush until the final
+    # `db.commit()` let SQLAlchemy reorder by dependency; the per-incident
+    # `db.flush()` below (needed to get each Signal's id for Attribution)
+    # flushes in insertion order instead, so campaigns must go first now.
+    for camp in pipeline.campaigns:
+        db.add(Campaign(
+            campaign_id=camp.campaign_id, user_id=camp.user_id,
+            first_seen=camp.first_seen, last_seen=camp.last_seen,
+            incident_count=len(camp.incident_ids), max_stage=camp.max_stage,
+            peak_risk=camp.peak_risk, stage_progression=list(camp.stage_progression),
+        ))
+    db.flush()
+
     for inc in pipeline.incidents:
         db.add(Incident(
             incident_id=inc.incident_id, user_id=inc.user_id,
@@ -184,14 +205,19 @@ def _persist_incidents(db: Session, pipeline: Pipeline, config_version: str,
                 node_role="signal" if node_role_signal.get(eid) else "context",
             ))
 
+        signal_rows = []
         for s in inc.signals:
-            db.add(SignalRow(
+            row_obj = SignalRow(
                 user_id=inc.user_id, event_date=inc.window_start.date(),
                 rule_id=s.rule_id, category=s.category, killchain_stage=s.stage,
                 strength=s.strength, weight=s.weight, contribution=s.contribution,
                 evidence_event_ids=list(s.evidence_event_ids), phrase=s.phrase,
                 detail=_json_safe(s.detail), config_version=config_version,
-            ))
+            )
+            db.add(row_obj)
+            signal_rows.append(row_obj)
+        db.flush()  # assigns signal_id on each row_obj, needed for Attribution's FK below
+        signal_id_by_rule = {r.rule_id: r.signal_id for r in signal_rows}
 
         row = pipeline.feature_row(inc.user_id, inc.window_start.date())
         if row is not None:
@@ -201,7 +227,30 @@ def _persist_incidents(db: Session, pipeline: Pipeline, config_version: str,
                 proximity_factor=0.0 if inc.over_dense else 1.0,
                 over_dense=inc.over_dense,
             )
-            deltas = counterfactual_deltas(inc.signals, row.get("anomaly_percentile"), corr, cfg)
+            anomaly_pctl = row.get("anomaly_percentile")
+            deltas = counterfactual_deltas(inc.signals, anomaly_pctl, corr, cfg)
+
+            # Attribution rows (docs/03-DATA-MODEL section 5 `attributions` table):
+            # this is what api/routers/incidents.py's get_incident reads to build
+            # the Evidence list, so without these every incident shows 0 signals
+            # regardless of how many the engine actually found - the deltas were
+            # already being computed for the narrative, just never persisted.
+            full_risk, _, _ = compute_risk(inc.signals, anomaly_pctl, corr, cfg)
+            threshold = cfg.triage["alert_threshold"]
+            minimal = minimal_sufficient_set(inc.signals, anomaly_pctl, corr, cfg, threshold, deltas=deltas)
+            minimal_rule_ids = {s.rule_id for s in minimal}
+            ranked = sorted(inc.signals, key=lambda s: deltas.get(s.rule_id, s.contribution), reverse=True)
+            for rank, s in enumerate(ranked, start=1):
+                sig_id = signal_id_by_rule.get(s.rule_id)
+                if sig_id is None:
+                    continue
+                delta = deltas.get(s.rule_id, 0.0)
+                db.add(Attribution(
+                    incident_id=inc.incident_id, signal_id=sig_id,
+                    points=s.contribution, risk_without=full_risk - delta, delta=delta,
+                    in_minimal_set=s.rule_id in minimal_rule_ids, rank=rank,
+                ))
+
             who = f"{inc.user_id} ({row.get('role', '?')}, {row.get('department', '?')})"
             narrative = build_narrative(inc, who, deltas, row, cfg)
             db.add(Narrative(
@@ -209,14 +258,6 @@ def _persist_incidents(db: Session, pipeline: Pipeline, config_version: str,
                 summary=narrative.summary, detail="\n".join(narrative.detail),
                 template_ids=[],
             ))
-
-    for camp in pipeline.campaigns:
-        db.add(Campaign(
-            campaign_id=camp.campaign_id, user_id=camp.user_id,
-            first_seen=camp.first_seen, last_seen=camp.last_seen,
-            incident_count=len(camp.incident_ids), max_stage=camp.max_stage,
-            peak_risk=camp.peak_risk, stage_progression=list(camp.stage_progression),
-        ))
 
     if pipeline.graph is not None:
         seen_incident_events: dict[str, set[str]] = {}
