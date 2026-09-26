@@ -202,3 +202,15 @@ class ReviewResponse(ApiModel):
     incident_status: str
     suppression: dict[str, Any] | None
     effects: ReviewEffects
+
+
+class AskRequest(ApiModel):
+    question: str = Field(min_length=1, max_length=2000)
+
+
+class AskResponse(ApiModel):
+    answer: str
+    disclaimer: str = (
+        "AI assistant - grounded only in this incident's stored evidence. "
+        "Not the audited record; see the narrative above for that."
+    )

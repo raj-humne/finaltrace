@@ -20,6 +20,7 @@ class Settings:
     lockout_max_seconds: float
     cors_origins: tuple[str, ...]
     demo_data_path: Path
+    groq_api_key: str | None
 
 
 def get_settings() -> Settings:
@@ -37,6 +38,7 @@ def get_settings() -> Settings:
             o.strip() for o in os.environ.get("SENTINEL_CORS_ORIGINS", "http://localhost:5173").split(",") if o.strip()
         ),
         demo_data_path=REPO_ROOT / "data",
+        groq_api_key=os.environ.get("GROQ_API_KEY"),
     )
 
 

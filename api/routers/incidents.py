@@ -15,7 +15,10 @@ from api.models.feedback import Review, Suppression
 from api.models.features import UserDayFeature
 from api.models.identity import User, UserOrg
 from api.models.ingest import Event
+from api.assistant import AssistantUnavailable, answer_incident_question
 from api.schemas.incidents import (
+    AskRequest,
+    AskResponse,
     AttributionItemOut,
     AttributionOut,
     CampaignRef,
@@ -375,6 +378,21 @@ def get_incident_graph(incident_id: str, db: Session = Depends(get_db)) -> Incid
         layout_hint="temporal_left_to_right",
         stats=GraphStats(node_count=len(nodes), edge_count=len(edges), component_diameter=0),
     )
+
+
+@router.post("/{incident_id}/ask", response_model=AskResponse)
+def ask_about_incident(incident_id: str, payload: AskRequest, db: Session = Depends(get_db)) -> AskResponse:
+    """Grounded Q&A over one incident's already-computed evidence (ADR 0004's
+    "optional v2 gloss" - never the authoritative record, which stays the
+    deterministic narrative). Failures degrade to a clear 503, never a 500 -
+    a flaky external call must not take down the incident page the rest of
+    the demo depends on."""
+    detail = get_incident(incident_id, db)
+    try:
+        answer = answer_incident_question(detail, payload.question)
+    except AssistantUnavailable as exc:
+        raise HTTPException(status_code=503, detail=f"assistant unavailable: {exc}")
+    return AskResponse(answer=answer)
 
 
 @router.get("/{incident_id}/export")
