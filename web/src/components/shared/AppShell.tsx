@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/state/auth";
 import { CommandPalette } from "./CommandPalette";
+import { ShortcutRegistryProvider, isTypingTarget, useShortcutRegistry } from "@/lib/shortcuts";
 
 const NAV = [
   { to: "/incidents", label: "Queue" },
@@ -28,8 +29,17 @@ function initialTheme(): "dark" | "light" {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
+  return (
+    <ShortcutRegistryProvider>
+      <AppShellInner>{children}</AppShellInner>
+    </ShortcutRegistryProvider>
+  );
+}
+
+function AppShellInner({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const registry = useShortcutRegistry();
   const [theme, setTheme] = useState<"dark" | "light">(initialTheme);
   const [paletteOpen, setPaletteOpen] = useState(false);
 
@@ -47,11 +57,36 @@ export function AppShell({ children }: { children: ReactNode }) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setPaletteOpen(true);
+        return;
+      }
+      // The command palette's own Escape handler and the "no-op while
+      // typing" rule below already cover its search input; nothing extra
+      // needed here to keep j/k/etc. from firing while it's open.
+      if (paletteOpen || e.metaKey || e.ctrlKey || e.altKey || isTypingTarget(e.target)) return;
+
+      const key = e.key.toLowerCase();
+      if (key === "j" || key === "k") {
+        const list = registry.list;
+        if (!list || list.count === 0) return;
+        e.preventDefault();
+        list.onMove(key === "j" ? 1 : -1);
+      } else if (key === "enter" || key === "i") {
+        const list = registry.list;
+        if (!list || list.count === 0) return;
+        e.preventDefault();
+        list.onOpen();
+      } else if (key === "c") {
+        if (!registry.createAction) return;
+        e.preventDefault();
+        registry.createAction();
+      } else if (key === "b") {
+        e.preventDefault();
+        navigate(-1);
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [paletteOpen, navigate, registry]);
 
   return (
     <div className="min-h-screen bg-(--color-page)">

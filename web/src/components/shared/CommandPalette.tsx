@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { fuzzyScore } from "@/lib/fuzzy";
 
 const ROUTES = [
   { to: "/incidents", label: "Go to queue" },
@@ -30,9 +31,15 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  if (!open) return null;
+  const filtered = useMemo(() => {
+    const scored = ROUTES.map((r) => ({ route: r, score: fuzzyScore(query, r.label) })).filter(
+      (x): x is { route: (typeof ROUTES)[number]; score: number } => x.score !== null
+    );
+    scored.sort((a, b) => b.score - a.score);
+    return scored.map((x) => x.route);
+  }, [query]);
 
-  const filtered = ROUTES.filter((r) => r.label.toLowerCase().includes(query.toLowerCase()));
+  if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 pt-32" onClick={onClose}>

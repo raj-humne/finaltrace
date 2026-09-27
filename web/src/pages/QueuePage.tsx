@@ -1,5 +1,5 @@
-import { useCallback, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Inbox } from "lucide-react";
 import { useIncidents } from "@/hooks/useIncidents";
@@ -7,6 +7,7 @@ import { IncidentRow } from "@/components/shared/IncidentRow";
 import { EmptyState, ErrorState } from "@/components/shared/EmptyState";
 import { IncidentRowSkeleton, Skeleton } from "@/components/shared/Skeleton";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { useListShortcuts } from "@/lib/shortcuts";
 import { LANES, type TriageLane } from "@/lib/design";
 import { cn } from "@/lib/utils";
 
@@ -72,6 +73,28 @@ export function QueuePage() {
   });
 
   const departments = [...new Set((data?.items ?? []).map((i) => i.department).filter(Boolean))] as string[];
+
+  const navigate = useNavigate();
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  useEffect(() => {
+    setSelectedIndex((i) => Math.min(i, Math.max(0, items.length - 1)));
+  }, [items.length]);
+  useEffect(() => {
+    virtualizer.scrollToIndex(selectedIndex, { align: "auto" });
+  }, [selectedIndex, virtualizer]);
+  useListShortcuts(
+    items.length > 0
+      ? {
+          count: items.length,
+          getSelectedIndex: () => selectedIndex,
+          onMove: (delta) => setSelectedIndex((i) => Math.max(0, Math.min(items.length - 1, i + delta))),
+          onOpen: () => {
+            const item = items[selectedIndex];
+            if (item) navigate(`/incidents/${item.incident_id}`);
+          },
+        }
+      : null
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -164,7 +187,7 @@ export function QueuePage() {
                     data-index={virtualRow.index}
                     style={{ position: "absolute", top: 0, left: 0, width: "100%", transform: `translateY(${virtualRow.start}px)` }}
                   >
-                    <IncidentRow item={item} />
+                    <IncidentRow item={item} selected={virtualRow.index === selectedIndex} />
                   </div>
                 );
               })}
