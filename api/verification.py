@@ -22,6 +22,7 @@ import jwt
 from sqlalchemy.orm import Session
 
 from api.models.correlation import Incident
+from api.models.explain import Narrative
 from api.models.verification import IncidentVerificationToken
 from api.security.audit import write_audit
 from api.settings import settings
@@ -69,6 +70,16 @@ class VerifiedReport:
     config_version: str
     issued_at: dt.datetime
     issued_by: str
+    # Proof the flagged user actually did something, not just an abstract
+    # score - the same narrative and evidence bullets the analyst dashboard
+    # shows, re-read fresh from the incident at verify time (never embedded
+    # in the token itself, so it can't go stale or bloat the JWT).
+    user_id: str
+    window_start: dt.datetime
+    window_end: dt.datetime
+    headline: str
+    summary: str
+    evidence: list[str]
 
 
 def issue_verification_token(db: Session, incident: Incident, issued_by: str) -> str:
@@ -144,9 +155,25 @@ def verify_and_consume_token(db: Session, token: str, used_from_ip: str | None =
     )
     db.commit()
 
+    # The token's signed claims already prove risk/confidence/lane weren't
+    # tampered with. What they don't answer is "did this user actually do
+    # anything" - so pull the real narrative and evidence bullets fresh from
+    # the incident this token points to, the same ones the analyst dashboard
+    # shows. incident/narrative are looked up post-verification, from the
+    # already-trusted incident_id in the signed claims, not from anything the
+    # caller supplied.
+    incident = db.get(Incident, claims["incident_id"])
+    narrative = db.get(Narrative, claims["incident_id"])
+
     return VerifiedReport(
         incident_id=claims["incident_id"], risk=claims["risk"], confidence=claims["confidence"],
         triage_lane=claims["triage_lane"], config_version=claims["config_version"],
         issued_at=dt.datetime.fromtimestamp(claims["iat"], tz=dt.timezone.utc),
         issued_by=row.issued_by,
+        user_id=incident.user_id if incident else "",
+        window_start=incident.window_start if incident else dt.datetime.fromtimestamp(claims["iat"], tz=dt.timezone.utc),
+        window_end=incident.window_end if incident else dt.datetime.fromtimestamp(claims["iat"], tz=dt.timezone.utc),
+        headline=narrative.headline if narrative else "",
+        summary=narrative.summary if narrative else "",
+        evidence=narrative.detail.split("\n") if narrative and narrative.detail else [],
     )

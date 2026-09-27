@@ -68,4 +68,6 @@ def verify_token(payload: VerifyTokenRequest, request: Request, db: Session = De
         triage_lane=result.triage_lane, config_version=result.config_version,
         issued_at=result.issued_at, issued_by=result.issued_by,
         verified_at=dt.datetime.now(dt.timezone.utc),
+        user_id=result.user_id, window_start=result.window_start, window_end=result.window_end,
+        headline=result.headline, summary=result.summary, evidence=result.evidence,
     )

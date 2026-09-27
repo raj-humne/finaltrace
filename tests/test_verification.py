@@ -133,6 +133,13 @@ def test_a_fresh_token_verifies_successfully_with_the_real_incident_data(demo_cl
     assert body["triage_lane"] == "AUTO_FLAG"
     assert body["risk"] >= 70
     assert body["issued_by"] == "verify_test"
+    # Proof the flagged user actually did something, not just a risk number
+    # (judge-requested) - a real user, a real time window, and real evidence
+    # text, not empty placeholders.
+    assert body["user_id"]
+    assert body["window_start"] < body["window_end"]
+    assert body["headline"]
+    assert isinstance(body["evidence"], list) and len(body["evidence"]) > 0
 
 
 def test_a_used_token_cannot_verify_a_second_time(demo_client, flagged_incident):

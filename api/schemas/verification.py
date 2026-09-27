@@ -26,3 +26,10 @@ class VerifyTokenResponse(ApiModel):
     issued_at: dt.datetime
     issued_by: str
     verified_at: dt.datetime
+    # Proof the flagged user actually did something, not just a score.
+    user_id: str
+    window_start: dt.datetime
+    window_end: dt.datetime
+    headline: str
+    summary: str
+    evidence: list[str]

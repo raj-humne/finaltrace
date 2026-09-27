@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { api } from "@/lib/api/client";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 import type { components } from "@/lib/api/types.gen";
 
 type VerifyTokenResponse = components["schemas"]["VerifyTokenResponse"];
@@ -94,10 +94,34 @@ export function VerifyTokenPage() {
         {result && (
           <div
             role="status"
-            className="mt-4 rounded-md border border-(--color-ember-400) bg-(--color-surface) p-4"
+            className="mt-4 flex flex-col gap-4 rounded-md border border-(--color-ember-400) bg-(--color-surface) p-4"
           >
-            <p className="text-sm font-medium text-(--color-ember-400)">Genuine — verified</p>
-            <dl className="mt-3 grid grid-cols-2 gap-y-2 text-sm">
+            <div>
+              <p className="text-sm font-medium text-(--color-ember-400)">Genuine — verified</p>
+              <p className="mt-1 text-xs text-(--color-ink-muted)">
+                {result.user_id} · {formatDateTime(result.window_start)}–{formatDateTime(result.window_end)}
+              </p>
+            </div>
+
+            {/* What the user actually did, not just a score — the same
+                narrative and evidence bullets the analyst dashboard shows,
+                re-read from the incident this token points to. */}
+            {result.headline && <p className="text-base font-medium text-(--color-ink)">{result.headline}</p>}
+            {result.summary && <p className="text-sm leading-relaxed text-(--color-ink-secondary)">{result.summary}</p>}
+            {result.evidence.length > 0 && (
+              <ul className="flex flex-col gap-1.5 border-t border-(--color-hairline) pt-3 text-sm text-(--color-ink)">
+                {result.evidence.map((line, i) => (
+                  <li key={i} className="flex gap-2">
+                    <span aria-hidden className="text-(--color-ink-muted)">
+                      &bull;
+                    </span>
+                    {line}
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <dl className="grid grid-cols-2 gap-y-2 border-t border-(--color-hairline) pt-3 text-sm">
               <dt className="text-(--color-ink-muted)">Incident</dt>
               <dd className="font-mono-tab text-(--color-ink)">{result.incident_id}</dd>
               <dt className="text-(--color-ink-muted)">Risk</dt>
@@ -109,11 +133,9 @@ export function VerifyTokenPage() {
               <dt className="text-(--color-ink-muted)">Issued by</dt>
               <dd className="text-(--color-ink)">{result.issued_by}</dd>
               <dt className="text-(--color-ink-muted)">Issued at</dt>
-              <dd className="text-(--color-ink)">{new Date(result.issued_at).toLocaleString()}</dd>
-              <dt className="text-(--color-ink-muted)">Verified at</dt>
-              <dd className="text-(--color-ink)">{new Date(result.verified_at).toLocaleString()}</dd>
+              <dd className="text-(--color-ink)">{formatDateTime(result.issued_at)}</dd>
             </dl>
-            <p className="mt-3 text-xs text-(--color-ink-muted)">
+            <p className="text-xs text-(--color-ink-muted)">
               This token has now been consumed and cannot verify this report again.
             </p>
           </div>

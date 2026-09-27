@@ -1965,6 +1965,24 @@ export interface components {
              * Format: date-time
              */
             verified_at: string;
+            /** User Id */
+            user_id: string;
+            /**
+             * Window Start
+             * Format: date-time
+             */
+            window_start: string;
+            /**
+             * Window End
+             * Format: date-time
+             */
+            window_end: string;
+            /** Headline */
+            headline: string;
+            /** Summary */
+            summary: string;
+            /** Evidence */
+            evidence: string[];
         };
     };
     responses: never;
