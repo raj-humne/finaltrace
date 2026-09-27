@@ -9,6 +9,7 @@ import type { TriageLane } from "@/lib/design";
 import { CorrelationGraph } from "@/components/shared/CorrelationGraph";
 import { SignalCard } from "@/components/shared/SignalCard";
 import { MitigationPanel } from "@/components/shared/MitigationPanel";
+import { VerificationPanel } from "@/components/shared/VerificationPanel";
 import { FeedbackDialog } from "@/components/shared/FeedbackDialog";
 import { VerdictForm } from "@/components/shared/VerdictForm";
 import { AskAssistant } from "@/components/shared/AskAssistant";
@@ -223,6 +224,12 @@ export function IncidentPage() {
         </div>
 
         <MitigationPanel mitigations={incident.mitigations ?? []} />
+
+        {incident.score?.triage_lane === "AUTO_FLAG" && (
+          <div className="p-4">
+            <VerificationPanel incidentId={incident.incident_id!} />
+          </div>
+        )}
 
         <div className="p-4">
           <AskAssistant incidentId={incident.incident_id!} />

@@ -9,6 +9,7 @@ import { UsersPage } from "@/pages/UsersPage";
 import { UserPage } from "@/pages/UserPage";
 import { DetectionHealthPage } from "@/pages/DetectionHealthPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
+import { VerifyTokenPage } from "@/pages/VerifyTokenPage";
 
 function Protected({ children }: { children: ReactNode }) {
   const { status } = useAuth();
@@ -32,6 +33,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/verify" element={<VerifyTokenPage />} />
       <Route path="/" element={<Navigate to="/incidents" replace />} />
       <Route path="/incidents" element={<Protected><QueuePage /></Protected>} />
       <Route path="/incidents/:incidentId" element={<Protected><IncidentPage /></Protected>} />

@@ -640,6 +640,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/incidents/{incident_id}/verification-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Issue Token */
+        post: operations["issue_token_api_v1_incidents__incident_id__verification_token_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/verify-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify Token
+         * @description Deliberately outside get_current_account - see module docstring.
+         */
+        post: operations["verify_token_api_v1_verify_token_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1277,6 +1314,23 @@ export interface components {
             /** Adapter Id */
             adapter_id: string | null;
         };
+        /** IssueTokenResponse */
+        IssueTokenResponse: {
+            /** Incident Id */
+            incident_id: string;
+            /** Token */
+            token: string;
+            /**
+             * Issued At
+             * Format: date-time
+             */
+            issued_at: string;
+            /**
+             * Note
+             * @default Single-use. This token can verify the report exactly once.
+             */
+            note: string;
+        };
         /** LiveDemoIncidentOut */
         LiveDemoIncidentOut: {
             /** Incident Id */
@@ -1879,6 +1933,38 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** VerifyTokenRequest */
+        VerifyTokenRequest: {
+            /** Token */
+            token: string;
+        };
+        /** VerifyTokenResponse */
+        VerifyTokenResponse: {
+            /** Valid */
+            valid: boolean;
+            /** Incident Id */
+            incident_id: string;
+            /** Risk */
+            risk: number;
+            /** Confidence */
+            confidence: number;
+            /** Triage Lane */
+            triage_lane: string;
+            /** Config Version */
+            config_version: string;
+            /**
+             * Issued At
+             * Format: date-time
+             */
+            issued_at: string;
+            /** Issued By */
+            issued_by: string;
+            /**
+             * Verified At
+             * Format: date-time
+             */
+            verified_at: string;
         };
     };
     responses: never;
@@ -2958,6 +3044,70 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    issue_token_api_v1_incidents__incident_id__verification_token_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incident_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueTokenResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_token_api_v1_verify_token_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyTokenRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerifyTokenResponse"];
                 };
             };
             /** @description Validation Error */
