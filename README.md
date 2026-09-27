@@ -37,6 +37,8 @@ A hybrid rule + anomaly detection engine that ingests five streams of enterprise
 | [`docs/07-EVALUATION.md`](docs/07-EVALUATION.md) | Ground-truth methodology, the metrics that actually matter, target numbers |
 | [`docs/08-ADAPTER-LAYER.md`](docs/08-ADAPTER-LAYER.md) | Schema-mapping layer for real-world (non-CERT) log formats |
 | [`docs/09-DELIVERY-PLAN.md`](docs/09-DELIVERY-PLAN.md) | Build order, hackathon timeline, demo script, judge Q&A prep |
+| [`docs/10-LIVE-DEMO.md`](docs/10-LIVE-DEMO.md) | Two-laptop live-injection demo mechanism |
+| [`docs/11-MITIGATION.md`](docs/11-MITIGATION.md) | Automated threat mitigation pipeline: config, webhook, mock remediation, audit trail |
 
 ### Architecture decision records
 

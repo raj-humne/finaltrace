@@ -15,6 +15,7 @@ from api.models.feedback import Review, Suppression
 from api.models.features import UserDayFeature
 from api.models.identity import User, UserOrg
 from api.models.ingest import Event
+from api.models.mitigation import MitigationAction
 from api.assistant import AssistantUnavailable, answer_incident_question
 from api.schemas.incidents import (
     AskRequest,
@@ -30,6 +31,7 @@ from api.schemas.incidents import (
     IncidentGraphOut,
     IncidentListItem,
     IncidentListResponse,
+    MitigationActionOut,
     NarrativeOut,
     ReviewEffects,
     ReviewOut,
@@ -286,6 +288,15 @@ def get_incident(incident_id: str, db: Session = Depends(get_db)) -> IncidentDet
         select(Review).where(Review.incident_id == incident_id).order_by(Review.reviewed_at.desc())
     )
 
+    mitigations_out = [
+        MitigationActionOut.model_validate(m)
+        for m in db.scalars(
+            select(MitigationAction)
+            .where(MitigationAction.incident_id == incident_id)
+            .order_by(MitigationAction.created_at.desc())
+        ).all()
+    ]
+
     return IncidentDetailOut(
         incident_id=incident.incident_id,
         user=UserRef(
@@ -320,6 +331,7 @@ def get_incident(incident_id: str, db: Session = Depends(get_db)) -> IncidentDet
             review_id=latest_review.review_id, verdict=latest_review.verdict, note=latest_review.note,
             analyst_id=latest_review.analyst_id, reviewed_at=latest_review.reviewed_at,
         ) if latest_review else None,
+        mitigations=mitigations_out,
         config_version=incident.config_version,
         links={
             "graph": f"/api/v1/incidents/{incident_id}/graph",

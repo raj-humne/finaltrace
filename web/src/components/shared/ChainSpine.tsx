@@ -127,11 +127,19 @@ export function ChainSpine({ size, activeStages, events = [], campaignPoints, on
               strokeOpacity={advanced || traversed ? 0.95 : 0.28}
               strokeWidth={advanced ? (isSm ? 3 : 5) : 1.25}
               strokeLinecap="round"
-            />
+            >
+              {!isSm && (
+                <title>
+                  {advanced
+                    ? `${STAGE_NAMES[i]} → ${STAGE_NAMES[i + 1]}: this incident advanced the kill chain across this step`
+                    : `${STAGE_NAMES[i]} → ${STAGE_NAMES[i + 1]}: not reached in this incident`}
+                </title>
+              )}
+            </line>
           );
         })}
 
-        {STAGE_NAMES.map((_, i) => {
+        {STAGE_NAMES.map((name, i) => {
           const active = activeSet.has(i);
           const isLead = active && i === maxActive;
           return (
@@ -145,7 +153,14 @@ export function ChainSpine({ size, activeStages, events = [], campaignPoints, on
               strokeOpacity={active ? 1 : 0.4}
               strokeWidth={1.25}
               filter={isLead ? `url(#${glowId})` : undefined}
-            />
+            >
+              {!isSm && (
+                <title>
+                  {name}
+                  {active ? (isLead ? " — furthest stage this incident reached" : " — reached") : " — not reached"}
+                </title>
+              )}
+            </circle>
           );
         })}
 

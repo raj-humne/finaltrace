@@ -35,8 +35,11 @@ from api.models.feedback import Review, Suppression
 from api.models.features import UserDayFeature
 from api.models.identity import User, UserOrg
 from api.models.ingest import Event, IngestRun
+from api.models.mitigation import MitigationAction
+from api.mitigation import evaluate_and_mitigate
 
 from engine.core.config import load_config
+from engine.core.ip_mapping import pc_to_ip
 from engine.correlate.incident import Incident as EngineIncident
 from engine.explain.counterfactual import counterfactual_deltas, minimal_sufficient_set
 from engine.explain.narrative import build_narrative
@@ -52,7 +55,7 @@ def _wipe(db: Session) -> None:
     """Clear tables this bridge owns, children before parents. Suppression/
     Review/Attribution aren't populated by this bridge, but pre-existing
     seed data in them FKs into incidents/signals, so they must go first."""
-    for model in (Suppression, Review, Attribution, Narrative, IncidentEdge,
+    for model in (Suppression, Review, Attribution, Narrative, MitigationAction, IncidentEdge,
                   IncidentEvent, SignalRow, Incident, Campaign,
                   UserDayScore, UserDayFeature, Event, UserOrg):
         db.execute(delete(model))
@@ -125,9 +128,10 @@ def _persist_events(db: Session, events: pd.DataFrame, config_version: str,
     for row in events.itertuples(index=False):
         attrs = {c[2:]: getattr(row, c) for c in events.columns
                  if c.startswith("a_") and pd.notna(getattr(row, c))}
+        pc_id = (row.pc_id or None) if isinstance(row.pc_id, str) else row.pc_id
         db.add(Event(
             event_id=row.event_id, user_id=row.user_id,
-            pc_id=(row.pc_id or None) if isinstance(row.pc_id, str) else row.pc_id,
+            pc_id=pc_id, ip_address=pc_to_ip(pc_id),
             ts=pd.Timestamp(row.ts).to_pydatetime().replace(tzinfo=dt.timezone.utc),
             event_date=pd.Timestamp(row.date).date(),
             source=str(row.source), action=str(row.action),
@@ -282,8 +286,9 @@ def _persist_incidents(db: Session, pipeline: Pipeline, config_version: str,
         ))
     db.flush()
 
+    incident_rows: dict[str, Incident] = {}
     for inc in pipeline.incidents:
-        db.add(Incident(
+        incident_row = Incident(
             incident_id=inc.incident_id, user_id=inc.user_id,
             window_start=inc.window_start.to_pydatetime().replace(tzinfo=dt.timezone.utc),
             window_end=inc.window_end.to_pydatetime().replace(tzinfo=dt.timezone.utc),
@@ -293,7 +298,10 @@ def _persist_incidents(db: Session, pipeline: Pipeline, config_version: str,
             signal_count=inc.signal_count, event_count=inc.event_count,
             category_count=inc.category_count, over_dense=inc.over_dense,
             campaign_id=inc.campaign_id, config_version=config_version,
-        ))
+            pc_id=inc.pc_id, flagged_ip=pc_to_ip(inc.pc_id),
+        )
+        db.add(incident_row)
+        incident_rows[inc.incident_id] = incident_row
 
         for eid in inc.event_ids:
             db.add(IncidentEvent(
@@ -370,6 +378,23 @@ def _persist_incidents(db: Session, pipeline: Pipeline, config_version: str,
                         weight=float(d.get("weight", 0.0)),
                     ))
                     break
+
+    # This session is autoflush=False (api/db/session.py), so the
+    # IncidentEdge rows just added above are invisible to any SELECT until
+    # explicitly flushed - without this, evaluate_and_mitigate()'s graph
+    # summary query would see 0 edges for every incident, every time.
+    db.flush()
+
+    # Automated mitigation (Challenge 1): evaluated once per incident, right
+    # here at incident finalization - the one place both this bulk bridge
+    # and the live-demo path (api/live_demo.py::persist_demo_result, which
+    # calls this same function) converge, so the pipeline never fires twice
+    # for the same incident_id (evaluate_and_mitigate is idempotent - a
+    # MitigationAction row already existing for an incident short-circuits
+    # any re-dispatch on a later reload of the same data).
+    for inc in pipeline.incidents:
+        evaluate_and_mitigate(db, incident_rows[inc.incident_id])
+
     db.commit()
     return {}
 

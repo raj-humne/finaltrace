@@ -2,18 +2,27 @@
 
 Sets SENTINEL_DB to a scratch SQLite file *before* any api.* module is
 imported, since api/db/session.py builds its engine from settings at import
-time.
+time. MITIGATION_PAYLOAD_DIR gets the same treatment: api/mitigation.py
+writes a real .json file per triggered incident, and without this it would
+write real-looking incident files straight into the shared demo folder
+(data/mitigation_payloads/) on every test run - a real bug this project hit
+once already.
 """
 from __future__ import annotations
 
 import os
 import pathlib
+import shutil
 
 _TEST_DB_PATH = pathlib.Path(__file__).resolve().parent.parent / "data" / "_test.db"
 if _TEST_DB_PATH.exists():
     _TEST_DB_PATH.unlink()
 
+_TEST_PAYLOAD_DIR = pathlib.Path(__file__).resolve().parent.parent / "data" / "_test_mitigation_payloads"
+shutil.rmtree(_TEST_PAYLOAD_DIR, ignore_errors=True)
+
 os.environ["SENTINEL_DB"] = f"sqlite:///{_TEST_DB_PATH.as_posix()}"
+os.environ["MITIGATION_PAYLOAD_DIR"] = str(_TEST_PAYLOAD_DIR)
 # Fast, deterministic lockout timings so tests don't sleep for real.
 os.environ.setdefault("SENTINEL_LOCKOUT_BASE_SECONDS", "2.0")
 os.environ.setdefault("SENTINEL_LOCKOUT_MAX_SECONDS", "3.0")
@@ -40,6 +49,7 @@ def _schema():
             _TEST_DB_PATH.unlink()
         except PermissionError:
             pass  # Windows keeps a brief handle on the sqlite file; harmless
+    shutil.rmtree(_TEST_PAYLOAD_DIR, ignore_errors=True)
 
 
 @pytest.fixture(autouse=True)

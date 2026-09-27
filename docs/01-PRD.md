@@ -58,7 +58,7 @@ Insider incidents are the slowest and most expensive class of breach to contain,
 ### 2.2 Non-goals (explicitly out of scope for v1)
 
 - **Real-time streaming.** v1 is batch over precomputed local data. The scaling path is designed (`02-ARCHITECTURE` section 8) but not built.
-- **Response / remediation actions.** SentinelTrace detects and explains. It does not disable accounts, quarantine hosts, or block egress.
+- **Real remediation enforcement.** SentinelTrace now supports configurable, simulated automated remediation through a webhook-based mitigation pipeline (see `docs/11-MITIGATION.md`): when a correlated incident's threat weight exceeds a configurable threshold, it automatically dispatches a structured JSON payload to a remediation webhook and simulates isolating the flagged entity, recording every action for analyst auditability. It does not actually disable real accounts, quarantine real hosts, or block real egress — production deployment would require integration with the organization's approved IAM/network/DLP remediation systems.
 - **Network packet inspection / DLP content analysis.** We reason over metadata (who, what, when, where), not file contents.
 - **Multi-tenancy, SSO, RBAC.** Single-tenant, single analyst role in v1.
 - **LLM-generated narratives.** Deliberately excluded — see `adr/0004`.

@@ -4,6 +4,7 @@ __pycache__/
 data/raw/*
 data/artifacts/*
 data/synthetic/
+data/mitigation_payloads/
 !data/raw/.gitkeep
 !data/artifacts/.gitkeep
 .venv/

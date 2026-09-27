@@ -8,14 +8,13 @@ import { LaneChip } from "@/components/shared/LaneChip";
 import type { TriageLane } from "@/lib/design";
 import { CorrelationGraph } from "@/components/shared/CorrelationGraph";
 import { SignalCard } from "@/components/shared/SignalCard";
+import { MitigationPanel } from "@/components/shared/MitigationPanel";
 import { VerdictForm } from "@/components/shared/VerdictForm";
 import { AskAssistant } from "@/components/shared/AskAssistant";
 import { ErrorState } from "@/components/shared/EmptyState";
 import { Skeleton } from "@/components/shared/Skeleton";
 import { Breadcrumbs } from "@/components/shared/Breadcrumbs";
-import { TimelineReplay } from "@/components/shared/TimelineReplay";
 import { usePageTitle } from "@/hooks/usePageTitle";
-import { useCreateShortcut } from "@/lib/shortcuts";
 import { formatDate, formatTime } from "@/lib/utils";
 
 export function IncidentPage() {
@@ -24,10 +23,8 @@ export function IncidentPage() {
   const { data: graph } = useIncidentGraph(incidentId);
   const { data: campaign } = useCampaign(incident?.campaign?.campaign_id);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [replayOpen, setReplayOpen] = useState(false);
   const startedAt = useRef(Date.now()).current;
   usePageTitle(incident?.narrative?.headline ?? incidentId);
-  useCreateShortcut(() => document.getElementById("verdict-note")?.focus());
 
   const activeStages = useMemo(
     () => [...new Set((incident?.signals ?? []).map((s) => s.stage).filter((s): s is number => s != null))].sort((a, b) => a - b),
@@ -149,28 +146,18 @@ export function IncidentPage() {
         )}
 
         <div className="p-4">
-          <h2 className="mb-4 text-sm font-medium text-(--color-ink-secondary)">The chain</h2>
+          <h2 className="text-sm font-medium text-(--color-ink-secondary)">The chain</h2>
+          <p className="mt-1 mb-4 text-sm text-(--color-ink-secondary)">
+            The six stages a real intrusion moves through, left to right — recon, staging, collecting data, exfiltrating it, then
+            covering tracks. A <strong className="text-(--color-ink)">filled, joined</strong> stage is one this incident actually
+            reached; a <strong className="text-(--color-ink)">hollow</strong> stage is one it never got to. The glowing dot marks
+            how far it went. Labels below the rail are the specific events that tripped a detection rule.
+          </p>
           <ChainSpine size="lg" activeStages={activeStages} events={eventPins} />
           {windowStart && windowEnd && (
             <p className="mt-2 text-xs text-(--color-ink-muted)">
               {formatDate(windowStart)}, {formatTime(windowStart)}-{formatTime(windowEnd)} · {windowDurationMin?.toFixed(1)} min
             </p>
-          )}
-          {enrichedGraphNodes.length > 0 && (
-            <div className="mt-3">
-              <button
-                onClick={() => setReplayOpen((o) => !o)}
-                aria-expanded={replayOpen}
-                className="flex items-center gap-1.5 rounded-md border border-(--color-hairline) px-3 py-1.5 text-sm text-(--color-ink-secondary) hover:text-(--color-ink)"
-              >
-                {replayOpen ? "Hide replay" : "▶ Replay the day"}
-              </button>
-              {replayOpen && (
-                <div className="mt-3 rounded-md border border-(--color-hairline) p-4">
-                  <TimelineReplay nodes={enrichedGraphNodes} finalRisk={risk} />
-                </div>
-              )}
-            </div>
           )}
         </div>
 
@@ -230,6 +217,8 @@ export function IncidentPage() {
             </p>
           )}
         </div>
+
+        <MitigationPanel mitigations={incident.mitigations ?? []} />
 
         <div className="p-4">
           <AskAssistant incidentId={incident.incident_id!} />

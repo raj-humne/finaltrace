@@ -6,6 +6,7 @@ from typing import Any
 from pydantic import Field
 
 from api.schemas.common import ApiModel
+from api.schemas.mitigation import MitigationActionOut
 
 
 class IncidentListItem(ApiModel):
@@ -132,6 +133,7 @@ class IncidentDetailOut(ApiModel):
     campaign: CampaignRef | None
     status: str
     review: ReviewOut | None
+    mitigations: list[MitigationActionOut]
     config_version: str
     links: dict[str, str]
 

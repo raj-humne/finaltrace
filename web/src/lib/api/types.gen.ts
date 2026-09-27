@@ -470,6 +470,142 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/live-demo/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Actions */
+        get: operations["list_actions_api_v1_live_demo_actions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/live-demo/inject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Inject */
+        post: operations["inject_api_v1_live_demo_inject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/live-demo/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reset */
+        post: operations["reset_api_v1_live_demo_reset_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mitigation/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Status */
+        get: operations["get_status_api_v1_mitigation_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mitigation/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Actions */
+        get: operations["list_actions_api_v1_mitigation_actions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mitigation/actions/{mitigation_action_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Action */
+        get: operations["get_action_api_v1_mitigation_actions__mitigation_action_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mitigation/incidents/{incident_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Action For Incident */
+        get: operations["get_action_for_incident_api_v1_mitigation_incidents__incident_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mock-remediation/isolate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Isolate */
+        post: operations["isolate_api_v1_mock_remediation_isolate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -798,6 +934,17 @@ export interface components {
             /** Component Diameter */
             component_diameter: number;
         };
+        /** GraphSummaryOut */
+        GraphSummaryOut: {
+            /** Node Count */
+            node_count: number;
+            /** Edge Count */
+            edge_count: number;
+            /** Categories */
+            categories: number;
+            /** Stages */
+            stages: number[];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -875,6 +1022,8 @@ export interface components {
             /** Status */
             status: string;
             review: components["schemas"]["ReviewOut"] | null;
+            /** Mitigations */
+            mitigations: components["schemas"]["MitigationActionOut"][];
             /** Config Version */
             config_version: string;
             /** Links */
@@ -1025,6 +1174,50 @@ export interface components {
             /** Adapter Id */
             adapter_id: string | null;
         };
+        /** LiveDemoIncidentOut */
+        LiveDemoIncidentOut: {
+            /** Incident Id */
+            incident_id: string;
+            /** Risk */
+            risk: number;
+            /** Confidence */
+            confidence: number;
+            /** Triage Lane */
+            triage_lane: string;
+            /** Signal Count */
+            signal_count: number;
+            /** Event Count */
+            event_count: number;
+            /** Categories */
+            categories: string[];
+            /** Stages */
+            stages: number[];
+            /** Mitigation */
+            mitigation?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** LiveDemoInjectRequest */
+        LiveDemoInjectRequest: {
+            /** Actions */
+            actions?: string[] | null;
+            /**
+             * Scenario
+             * @default false
+             */
+            scenario: boolean;
+        };
+        /** LiveDemoInjectResponse */
+        LiveDemoInjectResponse: {
+            /** User Id */
+            user_id: string;
+            /** Injected Through */
+            injected_through: string;
+            /** Incidents Today */
+            incidents_today: components["schemas"]["LiveDemoIncidentOut"][];
+            /** Total Incidents For User */
+            total_incidents_for_user: number;
+        };
         /** LoginRequest */
         LoginRequest: {
             /** Username */
@@ -1035,6 +1228,67 @@ export interface components {
         /** LoginResponse */
         LoginResponse: {
             account: components["schemas"]["AccountOut"];
+        };
+        /** MitigationActionOut */
+        MitigationActionOut: {
+            /** Mitigation Action Id */
+            mitigation_action_id: number;
+            /** Incident Id */
+            incident_id: string;
+            /** User Id */
+            user_id: string;
+            /** Flagged Ip */
+            flagged_ip: string | null;
+            /** Threat Weight */
+            threat_weight: number;
+            /** Threshold */
+            threshold: number;
+            /** Action Type */
+            action_type: string;
+            /** Target Type */
+            target_type: string;
+            /** Target Value */
+            target_value: string | null;
+            /** Status */
+            status: string;
+            /** Webhook Url */
+            webhook_url: string;
+            /** Webhook Status Code */
+            webhook_status_code: number | null;
+            /** Webhook Response */
+            webhook_response: string | null;
+            /** Isolation Status */
+            isolation_status: string;
+            /** Reason */
+            reason: string;
+            /** Error Message */
+            error_message: string | null;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Completed At */
+            completed_at: string | null;
+        };
+        /**
+         * MitigationStatusOut
+         * @description GET /mitigation/status - a safe, non-secret probe of the pipeline's
+         *     current configuration, for the dashboard and for demo verification.
+         */
+        MitigationStatusOut: {
+            /** Enabled */
+            enabled: boolean;
+            /** Threshold */
+            threshold: number;
+            /** Webhook Url */
+            webhook_url: string;
+            /** Webhook Timeout Seconds */
+            webhook_timeout_seconds: number;
         };
         /** NarrativeOut */
         NarrativeOut: {
@@ -1082,6 +1336,43 @@ export interface components {
             reason: string;
             /** Raw */
             raw: string;
+        };
+        /**
+         * RemediationPayload
+         * @description The structured JSON body sent to the (mock) remediation webhook, and
+         *     stored verbatim in `MitigationAction.payload` for auditability.
+         */
+        RemediationPayload: {
+            /** Incident Id */
+            incident_id: string;
+            /** Threat Weight */
+            threat_weight: number;
+            /** Threshold */
+            threshold: number;
+            /** User Id */
+            user_id: string;
+            /** Flagged Ip */
+            flagged_ip: string | null;
+            /** Action */
+            action: string;
+            /** Target Type */
+            target_type: string;
+            /** Target */
+            target: string | null;
+            graph_summary: components["schemas"]["GraphSummaryOut"];
+            /** Nodes */
+            nodes: {
+                [key: string]: unknown;
+            }[];
+            /** Reason */
+            reason: string;
+            /** Evidence */
+            evidence: string[];
+            /**
+             * Timestamp
+             * Format: date-time
+             */
+            timestamp: string;
         };
         /** ReviewEffects */
         ReviewEffects: {
@@ -2299,6 +2590,227 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IngestRunOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_actions_api_v1_live_demo_actions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string[];
+                    };
+                };
+            };
+        };
+    };
+    inject_api_v1_live_demo_inject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LiveDemoInjectRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LiveDemoInjectResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_api_v1_live_demo_reset_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_status_api_v1_mitigation_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MitigationStatusOut"];
+                };
+            };
+        };
+    };
+    list_actions_api_v1_mitigation_actions_get: {
+        parameters: {
+            query?: {
+                incident_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MitigationActionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_action_api_v1_mitigation_actions__mitigation_action_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mitigation_action_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MitigationActionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_action_for_incident_api_v1_mitigation_incidents__incident_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incident_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MitigationActionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    isolate_api_v1_mock_remediation_isolate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RemediationPayload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */

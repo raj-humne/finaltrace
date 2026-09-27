@@ -21,6 +21,11 @@ class Settings:
     cors_origins: tuple[str, ...]
     demo_data_path: Path
     groq_api_key: str | None
+    mitigation_enabled: bool
+    mitigation_threat_weight_threshold: float
+    mitigation_webhook_url: str
+    mitigation_webhook_timeout_seconds: float
+    mitigation_payload_dir: Path
 
 
 def get_settings() -> Settings:
@@ -39,6 +44,15 @@ def get_settings() -> Settings:
         ),
         demo_data_path=REPO_ROOT / "data",
         groq_api_key=os.environ.get("GROQ_API_KEY"),
+        mitigation_enabled=os.environ.get("MITIGATION_ENABLED", "true").lower() == "true",
+        mitigation_threat_weight_threshold=float(os.environ.get("MITIGATION_THREAT_WEIGHT_THRESHOLD", "70")),
+        mitigation_webhook_url=os.environ.get(
+            "MITIGATION_WEBHOOK_URL", "http://localhost:8000/api/v1/mock-remediation/isolate"
+        ),
+        mitigation_webhook_timeout_seconds=float(os.environ.get("MITIGATION_WEBHOOK_TIMEOUT_SECONDS", "5")),
+        mitigation_payload_dir=Path(
+            os.environ.get("MITIGATION_PAYLOAD_DIR", str(REPO_ROOT / "data" / "mitigation_payloads"))
+        ),
     )
 
 
