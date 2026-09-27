@@ -40,10 +40,7 @@ export function ChainSpine({ size, activeStages, events = [], campaignPoints, on
   const activeSet = useMemo(() => new Set(activeStages), [activeStages]);
   const maxActive = activeStages.length ? Math.max(...activeStages) : -1;
   const minActive = activeStages.length ? Math.min(...activeStages) : STAGE_COUNT;
-
-  if (size === "campaign" && campaignPoints && campaignPoints.length > 0) {
-    return <CampaignSpine points={campaignPoints} onSelect={onSelectCampaignPoint} className={className} />;
-  }
+  const isCampaign = size === "campaign" && !!campaignPoints && campaignPoints.length > 0;
 
   const isSm = size === "sm";
   const width = isSm ? 96 : 800;
@@ -53,18 +50,36 @@ export function ChainSpine({ size, activeStages, events = [], campaignPoints, on
   const dotR = isSm ? 3 : 6;
   const leadColor = maxActive >= 3 ? EMBER_STEPS[3] : STAGE_RAMP.dark;
 
-  // Events sharing a stage share an x position — stack them into separate
-  // rows instead of a fixed two-row alternation, which otherwise prints
-  // multiple labels on top of each other whenever a stage fires more than
-  // once (seen for real: 3+ signals landing on "staging" in one incident).
+  // Events sharing a stage AND a label (e.g. a 45-file burst macro citing
+  // every file it touched as evidence) collapse into one "label ×45" pin
+  // spanning first→last time, instead of 45 near-identical rows stacked
+  // into an unreadable column — seen for real on the live-demo's
+  // file_copy_burst scenario. Genuinely distinct labels at the same stage
+  // still get their own row, stacked as before.
   const pinRows = useMemo(() => {
     if (isSm) return { rows: [], maxDepth: 0 };
+    const groups = new Map<string, { ev: ChainSpineEventPin; count: number; lastTs: string }>();
+    const order: string[] = [];
+    for (const ev of events) {
+      const key = `${ev.stage}::${ev.label}`;
+      const existing = groups.get(key);
+      if (existing) {
+        existing.count += 1;
+        if (ev.ts > existing.lastTs) existing.lastTs = ev.ts;
+        if (ev.ts < existing.ev.ts) existing.ev = { ...existing.ev, ts: ev.ts };
+      } else {
+        groups.set(key, { ev, count: 1, lastTs: ev.ts });
+        order.push(key);
+      }
+    }
     const counts = new Map<number, number>();
-    const rows = events.map((ev) => {
-      const xKey = Math.max(0, Math.min(STAGE_COUNT - 1, ev.stage));
+    const rows = order.map((key) => {
+      const g = groups.get(key)!;
+      const xKey = Math.max(0, Math.min(STAGE_COUNT - 1, g.ev.stage));
       const row = counts.get(xKey) ?? 0;
       counts.set(xKey, row + 1);
-      return { ev, x: stageX(xKey), row };
+      const label = g.count > 1 ? `${g.ev.label} ×${g.count}` : g.ev.label;
+      return { ev: { ...g.ev, label }, x: stageX(xKey), row, lastTs: g.count > 1 ? g.lastTs : undefined };
     });
     const maxDepth = counts.size ? Math.max(...counts.values()) : 0;
     return { rows, maxDepth };
@@ -73,6 +88,10 @@ export function ChainSpine({ size, activeStages, events = [], campaignPoints, on
   const pinRowHeight = 28;
   const height = isSm ? 20 : Math.max(88, 56 + pinRows.maxDepth * pinRowHeight);
   const railY = isSm ? height / 2 : 40;
+
+  if (isCampaign) {
+    return <CampaignSpine points={campaignPoints!} onSelect={onSelectCampaignPoint} className={className} />;
+  }
 
   return (
     <div className={className}>
@@ -165,14 +184,14 @@ export function ChainSpine({ size, activeStages, events = [], campaignPoints, on
         })}
 
         {!isSm &&
-          pinRows.rows.map(({ ev, x, row }, i) => {
+          pinRows.rows.map(({ ev, x, row, lastTs }, i) => {
             const pinY = railY + 20 + row * pinRowHeight;
             const anchor = x <= padX + 4 ? "start" : x >= width - padX - 4 ? "end" : "middle";
             return (
               <g key={`${ev.ts}-${i}`}>
                 <line x1={x} y1={railY + dotR} x2={x} y2={pinY - 16} stroke="currentColor" strokeOpacity={0.35} strokeWidth={1} />
                 <text x={x} y={pinY} textAnchor={anchor} fontSize="10" className="fill-(--color-ink-secondary)" style={{ fontFamily: "var(--font-mono)" }}>
-                  {formatTime(ev.ts)}
+                  {lastTs ? `${formatTime(ev.ts)}–${formatTime(lastTs)}` : formatTime(ev.ts)}
                 </text>
                 <text x={x} y={pinY + 13} textAnchor={anchor} fontSize="10" className="fill-(--color-ink)">
                   {ev.label}
@@ -200,6 +219,30 @@ function CampaignSpine({ points, onSelect, className }: { points: ChainSpineCamp
   const yForStage = (stage: number) => railY - (stage / (STAGE_NAMES.length - 1)) * (railY - padTop);
   const lastPoint = points[points.length - 1];
   const leadColor = lastPoint.stage >= 3 ? EMBER_STEPS[3] : STAGE_RAMP.dark;
+
+  // With many incidents in a campaign, labeling every point prints the same
+  // stage name over and over, crammed close enough in time to overlap into
+  // an unreadable blob (seen for real: 13 points, mostly "STAGING", packed
+  // into 800px). Label only where the story actually changes — the first
+  // point, the last, and every stage transition — and stagger those labels
+  // onto a second tier whenever two of them still land too close together.
+  const MIN_LABEL_GAP = 54;
+  const placements = points.reduce<{ rows: { show: boolean; tier: number }[]; lastLabelX: number; lastTier: number }>(
+    (acc, p, i) => {
+      const isTransition = i === 0 || i === points.length - 1 || p.stage !== points[i - 1].stage;
+      if (!isTransition) {
+        acc.rows.push({ show: false, tier: 0 });
+        return acc;
+      }
+      const px = x(p.date);
+      const tier = px - acc.lastLabelX < MIN_LABEL_GAP ? (acc.lastTier === 0 ? 1 : 0) : 0;
+      acc.rows.push({ show: true, tier });
+      acc.lastLabelX = px;
+      acc.lastTier = tier;
+      return acc;
+    },
+    { rows: [], lastLabelX: -Infinity, lastTier: 0 }
+  ).rows;
 
   return (
     <div className={className}>
@@ -235,25 +278,46 @@ function CampaignSpine({ points, onSelect, className }: { points: ChainSpineCamp
             />
           );
         })}
-        {points.map((p) => {
+        {points.map((p, i) => {
           const isLast = p.incidentId === lastPoint.incidentId;
+          const { show, tier } = placements[i];
           return (
-            <g key={p.incidentId} tabIndex={0} role="button" aria-label={`${formatDate(p.date)}: ${p.headline}, risk ${p.risk}`} onClick={() => onSelect?.(p.incidentId)} className="cursor-pointer outline-none">
+            <g
+              key={p.incidentId}
+              tabIndex={0}
+              role="button"
+              aria-label={`${formatDate(p.date)}: ${p.headline}, ${STAGE_NAMES[p.stage]}, risk ${p.risk}`}
+              onClick={() => onSelect?.(p.incidentId)}
+              className="cursor-pointer outline-none"
+            >
+              <title>{`${formatDate(p.date)} — ${STAGE_NAMES[p.stage]} — ${p.headline} (risk ${p.risk.toFixed(1)})`}</title>
               <circle
                 cx={x(p.date)}
                 cy={yForStage(p.stage)}
-                r={isLast ? 8 : 7}
+                r={isLast ? 8 : show ? 6 : 4}
                 fill={isLast ? leadColor : STAGE_RAMP.dark}
+                fillOpacity={show || isLast ? 1 : 0.55}
                 stroke="var(--color-surface)"
                 strokeWidth={2}
                 filter={isLast ? `url(#${glowId})` : undefined}
               />
-              <text x={x(p.date)} y={yForStage(p.stage) - 14} textAnchor="middle" fontSize="10" className="fill-(--color-ink-secondary)" style={{ fontFamily: "var(--font-mono)" }}>
-                {formatDate(p.date)}
-              </text>
-              <text x={x(p.date)} y={railY + 16} textAnchor="middle" fontSize="10" className="fill-(--color-ink)">
-                {STAGE_NAMES[p.stage]}
-              </text>
+              {show && (
+                <>
+                  <text
+                    x={x(p.date)}
+                    y={yForStage(p.stage) - 14 - tier * 11}
+                    textAnchor="middle"
+                    fontSize="10"
+                    className="fill-(--color-ink-secondary)"
+                    style={{ fontFamily: "var(--font-mono)" }}
+                  >
+                    {formatDate(p.date)}
+                  </text>
+                  <text x={x(p.date)} y={railY + 16 + tier * 11} textAnchor="middle" fontSize="10" className="fill-(--color-ink)">
+                    {STAGE_NAMES[p.stage]}
+                  </text>
+                </>
+              )}
             </g>
           );
         })}

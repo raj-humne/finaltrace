@@ -184,13 +184,26 @@ export function CorrelationGraph({ nodes, edges, selectedId, onSelect, overDense
           n.fx = undefined;
           n.fy = undefined;
         });
+        // Default d3-force parameters treat every edge the same. A real
+        // incident here is dominated by the faint temporal spine (adjacent
+        // events in time) with only a few genuine shared_pc/shared_file/
+        // stage_advance edges layered in - with equal link strength, the
+        // long temporal chain is the only thing driving layout and it
+        // simply coils into a taut spiral (a well-known d3-force artifact
+        // for path graphs), which reads as noise rather than structure.
+        // Weakening the temporal spine's pull and strengthening the real
+        // correlation edges lets genuine clusters (same PC, same file,
+        // stage advances) separate visibly instead.
+        const linkForce = fg.d3Force("link");
+        linkForce?.strength((l: FGLink) => (l.type === "temporal" ? 0.02 : 0.85));
+        linkForce?.distance((l: FGLink) => (l.type === "temporal" ? 26 : 70));
+        fg.d3Force("charge")?.strength(-90);
         fg.d3ReheatSimulation();
-        // Without this the camera stays framed on the previous (temporal)
-        // layout's tight bounding box - the force simulation spreads nodes
-        // out over its cooldownTicks, but nothing ever re-frames the view to
-        // follow them, so only whatever corner they started in stays visible.
-        // cooldownTicks is 100 in force mode; give it a beat to settle first.
-        setTimeout(() => fg.zoomToFit(300, 24), 300);
+        // Without a re-frame the camera stays on the previous (temporal)
+        // layout's tight bounding box while the force simulation spreads
+        // nodes out - the ForceGraph2D onEngineStop handler below catches
+        // the moment the simulation actually settles and zooms to fit then,
+        // rather than guessing a fixed delay.
       }
     },
     [graphData, pinTemporalPositions]
@@ -232,7 +245,10 @@ export function CorrelationGraph({ nodes, edges, selectedId, onSelect, overDense
           height={size.height}
           graphData={graphData}
           nodeId="id"
-          cooldownTicks={layout === "temporal" ? 0 : 100}
+          cooldownTicks={layout === "temporal" ? 0 : 150}
+          onEngineStop={() => {
+            if (layout === "force") fgRef.current?.zoomToFit(300, 24);
+          }}
           linkColor={(l: FGLink) => {
             const active = activeId && (endpointId(l.source) === activeId || endpointId(l.target) === activeId);
             if (active) return "rgba(178, 100, 15, 0.9)";
