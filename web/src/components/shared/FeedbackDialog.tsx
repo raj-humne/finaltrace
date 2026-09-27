@@ -189,7 +189,16 @@ export function FeedbackDialog({ incidentId, disabled }: { incidentId: string; d
 
               {mutation.isError && (
                 <p role="alert" aria-live="polite" className="text-sm text-(--color-status-auto-flag)">
-                  Could not record this feedback. Try again.
+                  {(() => {
+                    const err = mutation.error;
+                    const detail =
+                      typeof err === "object" && err !== null
+                        ? (err as { detail?: string }).detail
+                        : typeof err === "string"
+                          ? err
+                          : undefined;
+                    return detail || "Could not record this feedback. Try again.";
+                  })()}
                 </p>
               )}
 
