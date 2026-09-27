@@ -27,12 +27,24 @@ export function VerifyTokenPage() {
     setSubmitting(true);
     setError(null);
     setResult(null);
-    const { data, error: apiError } = await api.POST("/api/v1/verify-token", {
-      body: { token: token.trim() },
-    });
+    let data, apiError;
+    try {
+      ({ data, error: apiError } = await api.POST("/api/v1/verify-token", {
+        body: { token: token.trim() },
+      }));
+    } catch {
+      setSubmitting(false);
+      setError("Could not reach the server. Check your connection and try again.");
+      return;
+    }
     setSubmitting(false);
     if (apiError) {
-      const detail = (apiError as { detail?: string })?.detail;
+      const detail =
+        typeof apiError === "object" && apiError !== null
+          ? (apiError as { detail?: string }).detail
+          : typeof apiError === "string"
+            ? apiError
+            : undefined;
       setError(detail || "This token could not be verified.");
       return;
     }
