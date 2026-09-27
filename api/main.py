@@ -14,6 +14,8 @@ from api.routers import (
     incidents,
     ingest,
     live_demo,
+    mitigation,
+    mock_remediation,
     rules,
     suppressions,
     users,
@@ -45,3 +47,5 @@ app.include_router(eval_router.router, prefix=api_v1)
 app.include_router(analyze.router, prefix=api_v1)
 app.include_router(ingest.router, prefix=api_v1)
 app.include_router(live_demo.router, prefix=api_v1)
+app.include_router(mitigation.router, prefix=api_v1)
+app.include_router(mock_remediation.router, prefix=api_v1)

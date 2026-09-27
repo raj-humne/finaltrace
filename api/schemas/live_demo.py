@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from api.schemas.common import ApiModel
 
 
@@ -17,6 +19,7 @@ class LiveDemoIncidentOut(ApiModel):
     event_count: int
     categories: list[str]
     stages: list[int]
+    mitigation: dict[str, Any] | None = None
 
 
 class LiveDemoInjectResponse(ApiModel):

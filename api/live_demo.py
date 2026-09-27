@@ -34,7 +34,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from api.db.base import Base
@@ -45,6 +45,7 @@ from api.models.explain import Attribution, Narrative
 from api.models.features import UserDayFeature
 from api.models.identity import User
 from api.models.ingest import Event, IngestRun
+from api.models.mitigation import MitigationAction
 from engine.core.config import Config, load_config
 from engine.run import Pipeline
 
@@ -319,6 +320,7 @@ def _wipe_demo_rows(db: Session) -> None:
         r[0] for r in db.query(Incident.incident_id).filter(Incident.user_id == DEMO_USER_ID).all()
     ]
     if incident_ids:
+        db.execute(delete(MitigationAction).where(MitigationAction.incident_id.in_(incident_ids)))
         db.execute(delete(Attribution).where(Attribution.incident_id.in_(incident_ids)))
         db.execute(delete(Narrative).where(Narrative.incident_id.in_(incident_ids)))
         db.execute(delete(IncidentEdge).where(IncidentEdge.incident_id.in_(incident_ids)))
@@ -402,6 +404,29 @@ def inject_and_rescore(action_names: list[str] | None, use_full_scenario: bool,
     pipeline = rescore(cfg)
     demo_incidents = persist_demo_result(db, pipeline, cfg)
 
+    # Automated mitigation (Challenge 1) already ran as part of incident
+    # finalization inside persist_demo_result -> api.load_pipeline._persist_
+    # incidents (the one shared integration point for both this live-demo
+    # path and the full bulk corpus bridge). Read back whatever it recorded
+    # for these incidents, for display in this response - never re-evaluate
+    # here, since evaluate_and_mitigate is only meant to run once per
+    # incident at finalization time.
+    mitigation_by_incident: dict[str, dict] = {}
+    incident_ids = [i.incident_id for i in demo_incidents]
+    if incident_ids:
+        for row in db.scalars(
+            select(MitigationAction).where(MitigationAction.incident_id.in_(incident_ids))
+        ).all():
+            mitigation_by_incident[row.incident_id] = {
+                "mitigation_action_id": row.mitigation_action_id,
+                "threat_weight": row.threat_weight,
+                "threshold": row.threshold,
+                "status": row.status,
+                "isolation_status": row.isolation_status,
+                "target_type": row.target_type,
+                "target_value": row.target_value,
+            }
+
     live_day = last_ts.date()
     todays = [i for i in demo_incidents if i.window_start.date() <= live_day <= i.window_end.date()]
 
@@ -414,6 +439,7 @@ def inject_and_rescore(action_names: list[str] | None, use_full_scenario: bool,
                 "confidence": round(i.confidence, 2), "triage_lane": i.triage_lane,
                 "signal_count": i.signal_count, "event_count": i.event_count,
                 "categories": list(i.categories), "stages": list(i.stages),
+                "mitigation": mitigation_by_incident.get(i.incident_id),
             }
             for i in todays
         ],

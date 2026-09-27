@@ -41,6 +41,7 @@ class Incident:
     confidence_terms: ConfidenceTerms
     campaign_id: str | None = None
     triage_lane: str | None = None
+    pc_id: str | None = None
 
 
 @dataclass
@@ -101,6 +102,7 @@ def build_incidents(
     node_ts = nx.get_node_attributes(g, "ts")
     node_user = nx.get_node_attributes(g, "user_id")
     node_is_signal = nx.get_node_attributes(g, "is_signal")
+    node_pc = nx.get_node_attributes(g, "pc_id")
 
     raw_incidents = []
     for component in nx.connected_components(g):
@@ -124,9 +126,14 @@ def build_incidents(
         window_end = node_ts[ordered_nodes[-1]]
 
         user_counts: dict[str, int] = {}
+        pc_counts: dict[str, int] = {}
         for eid in component:
             user_counts[node_user[eid]] = user_counts.get(node_user[eid], 0) + 1
+            pc = node_pc.get(eid)
+            if pc:
+                pc_counts[pc] = pc_counts.get(pc, 0) + 1
         primary_user = max(sorted(user_counts), key=lambda u: user_counts[u])
+        primary_pc = max(sorted(pc_counts), key=lambda p: pc_counts[p]) if pc_counts else None
 
         categories = sorted({s.category for s in signal_list})
         stages = sorted({s.stage for s in signal_list})
@@ -159,7 +166,7 @@ def build_incidents(
             event_count=len(component), signal_count=len(signal_list),
             category_count=len(categories), over_dense=over_dense,
             risk=risk, confidence=confidence, breakdown=breakdown,
-            confidence_terms=confidence_terms,
+            confidence_terms=confidence_terms, pc_id=primary_pc,
         ))
 
     raw_incidents.sort(key=lambda inc: (inc.user_id, inc.window_start))
