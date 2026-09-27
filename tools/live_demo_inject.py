@@ -30,10 +30,10 @@ import time
 
 try:
     import requests
-except ImportError:
+except ImportError as exc:
     print("This script needs 'requests' (pip install requests) - it has no "
          "other dependency on this repo's engine or API code.", file=sys.stderr)
-    raise SystemExit(1)
+    raise SystemExit(1) from exc
 
 
 def main(argv: list[str] | None = None) -> int:

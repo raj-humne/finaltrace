@@ -284,7 +284,7 @@ def reset_demo_events(db: Session) -> None:
     _wipe_demo_rows(db)
     backup_dir = DEMO_RAW_DIR / "_original"
     with _LOCK:
-        for source, fields in _FILE_SPECS.items():
+        for source in _FILE_SPECS:
             src = backup_dir / f"{source}.csv"
             dst = DEMO_RAW_DIR / f"{source}.csv"
             if src.exists():

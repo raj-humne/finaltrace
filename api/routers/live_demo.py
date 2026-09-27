@@ -27,7 +27,7 @@ def inject(payload: LiveDemoInjectRequest, db: Session = Depends(get_db)) -> Liv
     try:
         result = inject_and_rescore(payload.actions, payload.scenario, db)
     except UnknownDemoAction as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return LiveDemoInjectResponse(**result)
 
 
