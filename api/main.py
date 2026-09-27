@@ -19,6 +19,7 @@ from api.routers import (
     rules,
     suppressions,
     users,
+    verification,
 )
 from api.settings import settings
 
@@ -49,3 +50,4 @@ app.include_router(ingest.router, prefix=api_v1)
 app.include_router(live_demo.router, prefix=api_v1)
 app.include_router(mitigation.router, prefix=api_v1)
 app.include_router(mock_remediation.router, prefix=api_v1)
+app.include_router(verification.router, prefix=api_v1)

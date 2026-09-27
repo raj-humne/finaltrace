@@ -10,6 +10,7 @@ from api.models.features import UserDayFeature
 from api.models.identity import Account, AuditLog, SessionToken, User, UserOrg
 from api.models.ingest import Event, IngestRun
 from api.models.mitigation import MitigationAction
+from api.models.verification import IncidentVerificationToken
 
 __all__ = [
     "Base",
@@ -38,4 +39,5 @@ __all__ = [
     "BehavioralBaseline",
     "EdgeFeedbackWeight",
     "FeatureObservation",
+    "IncidentVerificationToken",
 ]

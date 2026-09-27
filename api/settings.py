@@ -26,6 +26,7 @@ class Settings:
     mitigation_webhook_url: str
     mitigation_webhook_timeout_seconds: float
     mitigation_payload_dir: Path
+    jwt_secret: str
 
 
 def get_settings() -> Settings:
@@ -52,6 +53,15 @@ def get_settings() -> Settings:
         mitigation_webhook_timeout_seconds=float(os.environ.get("MITIGATION_WEBHOOK_TIMEOUT_SECONDS", "5")),
         mitigation_payload_dir=Path(
             os.environ.get("MITIGATION_PAYLOAD_DIR", str(REPO_ROOT / "data" / "mitigation_payloads"))
+        ),
+        # Signs single-use incident verification tokens (api/verification.py).
+        # The fallback is a fixed dev-only value, same posture as docker-
+        # compose.yml's Postgres password - fine for a local demo, never for
+        # a real deployment. Set SENTINEL_JWT_SECRET to a real random value
+        # (e.g. `python -c "import secrets;print(secrets.token_urlsafe(48))"`)
+        # anywhere this matters for real.
+        jwt_secret=os.environ.get(
+            "SENTINEL_JWT_SECRET", "sentineltrace-dev-only-jwt-secret-do-not-use-in-production"
         ),
     )
 
