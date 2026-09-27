@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useCallback } from "react";
 import ForceGraph2D, { type NodeObject, type LinkObject, type ForceGraphMethods } from "react-force-graph-2d";
+import { forceCollide } from "d3-force-3d";
 import { SOURCE_SHAPES, SOURCE_LABELS, SOURCE_ORDER, EMBER_STEPS, emberForRisk, type EventSource } from "@/lib/design";
 import { cn, parseApiTimestamp } from "@/lib/utils";
 import type { components } from "@/lib/api/types.gen";
@@ -155,6 +156,26 @@ export function CorrelationGraph({ nodes, edges, selectedId, onSelect, overDense
       n.fx = 24 + ((t - tMin) / tSpan) * Math.max(1, w - 48);
       n.fy = Math.min(h - 24, 32 + (n.stage ?? 0) * 22);
     });
+    // A tight burst (e.g. 45 file events inside one 5-minute window, out of
+    // a 30-minute incident) maps to only a few pixels of a fixed time axis
+    // - a solid bar of overlapping dots, not 45 readable points. Nodes on
+    // the same stage row are pinned in exact time order already; this only
+    // nudges any that land within collision distance of the previous one
+    // rightward, a standard beeswarm declutter that never reorders points.
+    const MIN_GAP = 8;
+    const rows = new Map<number, FGNode[]>();
+    for (const n of graphData.nodes) {
+      const row = rows.get(n.fy!) ?? [];
+      row.push(n);
+      rows.set(n.fy!, row);
+    }
+    for (const row of rows.values()) {
+      row.sort((a, b) => a.fx! - b.fx!);
+      for (let i = 1; i < row.length; i++) {
+        const minX = row[i - 1].fx! + MIN_GAP;
+        if (row[i].fx! < minX) row[i].fx = minX;
+      }
+    }
   }, [graphData, tMin, tSpan, size.width, size.height]);
 
   // Bootstrap fixed positions once per dataset so the graph opens in
@@ -198,6 +219,14 @@ export function CorrelationGraph({ nodes, edges, selectedId, onSelect, overDense
         linkForce?.strength((l: FGLink) => (l.type === "temporal" ? 0.02 : 0.85));
         linkForce?.distance((l: FGLink) => (l.type === "temporal" ? 26 : 70));
         fg.d3Force("charge")?.strength(-90);
+        // A tight burst (e.g. 45 file events within one ten-minute window,
+        // linked only by the weak temporal spine to their neighbors) has
+        // almost nothing pulling them apart, so charge alone left them
+        // rendered on top of each other - a solid bar of overlapping
+        // shapes, not a readable cluster. A collision force gives every
+        // node a hard personal-space radius so the simulation can't settle
+        // with two dots occupying the same pixel.
+        fg.d3Force("collide", forceCollide((n: FGNode) => (n.has_signal ? 9 : 6.5)));
         fg.d3ReheatSimulation();
         // Without a re-frame the camera stays on the previous (temporal)
         // layout's tight bounding box while the force simulation spreads
