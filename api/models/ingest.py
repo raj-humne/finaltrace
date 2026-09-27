@@ -40,6 +40,7 @@ class Event(Base):
     event_id: Mapped[str] = mapped_column(String, primary_key=True)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.user_id"), nullable=False)
     pc_id: Mapped[str | None] = mapped_column(String)
+    ip_address: Mapped[str | None] = mapped_column(String)
     ts: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     event_date: Mapped[dt.date] = mapped_column(Date, nullable=False)
     source: Mapped[str] = mapped_column(String, nullable=False)

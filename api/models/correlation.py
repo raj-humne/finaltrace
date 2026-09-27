@@ -45,6 +45,8 @@ class Incident(Base):
     category_count: Mapped[int] = mapped_column(Integer, nullable=False)
     over_dense: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     campaign_id: Mapped[str | None] = mapped_column(ForeignKey("campaigns.campaign_id"))
+    pc_id: Mapped[str | None] = mapped_column(String)
+    flagged_ip: Mapped[str | None] = mapped_column(String)
     created_at: Mapped[dt.datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: dt.datetime.now(dt.timezone.utc), nullable=False
     )
