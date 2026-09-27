@@ -89,7 +89,6 @@ export function VerdictForm({
         ))}
       </fieldset>
       <textarea
-        id="verdict-note"
         value={note}
         onChange={(e) => setNote(e.target.value)}
         placeholder="note"
