@@ -329,7 +329,7 @@ def get_incident(incident_id: str, db: Session = Depends(get_db)) -> IncidentDet
         ),
         signals=signals_out,
         attribution=AttributionOut(
-            note="Contributions overlap due to category saturation and the correlation bonus; they do not sum to the total.",
+            note="Contributions overlap — they don't sum to the total.",
             items=attribution_items,
             minimal_sufficient_set=minimal_set,
             alert_threshold=40.0,

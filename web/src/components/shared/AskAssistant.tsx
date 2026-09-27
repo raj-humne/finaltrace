@@ -81,10 +81,7 @@ export function AskAssistant({ incidentId }: { incidentId: string }) {
           {mutation.isPending ? "Asking…" : "Ask"}
         </button>
       </form>
-      <p className="text-xs text-(--color-ink-muted)">
-        Answers are grounded only in this incident's stored evidence above - never outside knowledge, and never a
-        recommendation to take action.
-      </p>
+      <p className="text-xs text-(--color-ink-muted)">Uses only this incident's evidence — not a recommendation.</p>
     </div>
   );
 }

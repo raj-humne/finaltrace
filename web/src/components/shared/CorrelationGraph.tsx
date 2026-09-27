@@ -240,12 +240,7 @@ export function CorrelationGraph({ nodes, edges, selectedId, onSelect, overDense
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-sm text-(--color-ink-secondary)">
-        Every dot is one real log event from this incident. Every line is a real, named reason two events were pulled together —
-        hover a line or a dot to see exactly what it is. Switch <strong className="text-(--color-ink)">time</strong> to lay events
-        out in the order they happened, or <strong className="text-(--color-ink)">force</strong> to cluster tightly-related events
-        together instead.
-      </p>
+      <p className="text-sm text-(--color-ink-secondary)">Dots = real events · lines = why they're linked. Hover for details.</p>
       <div className="flex items-center justify-between">
         <div className="flex gap-1 text-xs">
           <button
@@ -349,57 +344,49 @@ function ShapeSwatch({ shape }: { shape: "circle" | "diamond" | "square" | "hexa
  * infer an encoding" applies here as much as it does to color). */
 function GraphLegend({ temporalCount }: { temporalCount: number }) {
   return (
-    <div className="flex flex-col gap-3 rounded-md border border-(--color-hairline) bg-(--color-surface) p-3 text-xs text-(--color-ink-secondary)">
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-        <span className="font-medium text-(--color-ink)">Shape = what kind of event</span>
+    <div className="flex flex-col gap-2 rounded-md border border-(--color-hairline) bg-(--color-surface) p-3 text-xs text-(--color-ink-secondary)">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <span className="font-medium text-(--color-ink)">Shape</span>
         {SOURCE_ORDER.map((src) => (
           <span key={src} className="flex items-center gap-1.5">
             <ShapeSwatch shape={SOURCE_SHAPES[src]} />
             {SOURCE_LABELS[src]}
           </span>
         ))}
+        <span className="text-(--color-ink-muted)">· bigger = flagged signal</span>
       </div>
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-        <span className="font-medium text-(--color-ink)">Fill = how much this event drove the score</span>
-        <span className="flex items-center gap-1.5">
-          <span
-            className="h-2.5 w-20 rounded-full"
-            style={{ background: `linear-gradient(to right, ${EMBER_STEPS[0]}, ${EMBER_STEPS[EMBER_STEPS.length - 1]})` }}
-          />
-          low → high
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full" style={{ background: "rgba(120,130,135,0.5)" }} />
-          grey = surrounding context, not itself flagged
-        </span>
-        <span>Bigger dot = flagged as a signal · smaller dot = context only</span>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <span className="font-medium text-(--color-ink)">Fill = score impact</span>
+        <span
+          className="h-2.5 w-16 rounded-full"
+          style={{ background: `linear-gradient(to right, ${EMBER_STEPS[0]}, ${EMBER_STEPS[EMBER_STEPS.length - 1]})` }}
+        />
+        <span className="text-(--color-ink-muted)">low → high · grey = context only</span>
       </div>
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-        <span className="font-medium text-(--color-ink)">Lines = why events were grouped together (hover any line for its name)</span>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <span className="font-medium text-(--color-ink)">Lines</span>
         <span className="flex items-center gap-1.5">
           <svg width={20} height={8} aria-hidden>
             <line x1={0} y1={4} x2={20} y2={4} stroke="rgba(222,127,28,0.9)" strokeWidth={2} />
           </svg>
-          moved the kill chain forward a stage
+          stage advance
         </span>
         <span className="flex items-center gap-1.5">
           <svg width={20} height={8} aria-hidden>
             <line x1={0} y1={4} x2={20} y2={4} stroke="rgba(90,100,105,0.85)" strokeWidth={1.5} strokeDasharray="3 2" />
           </svg>
-          same workstation or same file
+          same PC/file
         </span>
         <span className="flex items-center gap-1.5">
           <svg width={20} height={8} aria-hidden>
             <line x1={0} y1={4} x2={20} y2={4} stroke="rgba(120,130,135,0.35)" strokeWidth={1} />
           </svg>
-          led straight into the next event in time
+          next in time
         </span>
       </div>
       {temporalCount > 0 && (
         <p className="border-t border-(--color-hairline) pt-2 text-(--color-ink-muted)">
-          {temporalCount} more "happened around the same time" links exist beyond the faint chronological thread shown above —
-          left out because between them they'd connect nearly every event to every other one and just look like a solid block of
-          lines, not because anything is being hidden from you.
+          +{temporalCount} more time-proximity links hidden to avoid clutter.
         </p>
       )}
     </div>

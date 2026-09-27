@@ -104,18 +104,13 @@ export function IncidentPage() {
         <div className="mt-2 flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">{incident.narrative?.headline}</h1>
-            <p className="mt-1 text-sm text-(--color-ink-secondary)">
-              {incident.signals?.length ?? 0} correlated signals across {new Set((incident.signals ?? []).map((s) => s.category)).size} categories
-              {incident.user?.user_id && (
-                <>
-                  {" "}
-                  &middot;{" "}
-                  <Link to={`/users/${incident.user.user_id}`} className="text-(--color-accent) hover:underline">
-                    View {incident.user.name ?? incident.user.user_id}&rsquo;s profile
-                  </Link>
-                </>
-              )}
-            </p>
+            {incident.user?.user_id && (
+              <p className="mt-1 text-sm text-(--color-ink-secondary)">
+                <Link to={`/users/${incident.user.user_id}`} className="text-(--color-accent) hover:underline">
+                  View {incident.user.name ?? incident.user.user_id}&rsquo;s profile
+                </Link>
+              </p>
+            )}
           </div>
           <div className="flex shrink-0 flex-col items-end gap-2">
             <span className="font-mono-tab text-xs text-(--color-ink-muted)">{incident.incident_id}</span>
@@ -153,10 +148,7 @@ export function IncidentPage() {
         <div className="p-4">
           <h2 className="text-sm font-medium text-(--color-ink-secondary)">The chain</h2>
           <p className="mt-1 mb-4 text-sm text-(--color-ink-secondary)">
-            The six stages a real intrusion moves through, left to right — recon, staging, collecting data, exfiltrating it, then
-            covering tracks. A <strong className="text-(--color-ink)">filled, joined</strong> stage is one this incident actually
-            reached; a <strong className="text-(--color-ink)">hollow</strong> stage is one it never got to. The glowing dot marks
-            how far it went. Labels below the rail are the specific events that tripped a detection rule.
+            <strong className="text-(--color-ink)">Filled</strong> = reached · <strong className="text-(--color-ink)">hollow</strong> = not reached · glowing dot = furthest stage.
           </p>
           <ChainSpine size="lg" activeStages={activeStages} events={eventPins} />
           {windowStart && windowEnd && (
