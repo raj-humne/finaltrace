@@ -39,9 +39,11 @@ from sqlalchemy.orm import Session
 
 from api.db.base import Base
 from api.db.session import engine as db_engine
+from api.models.analyst_feedback import AnalystFeedback, FeatureObservation
 from api.models.correlation import Campaign, Incident, IncidentEdge, IncidentEvent
 from api.models.detection import ConfigVersion, Signal as SignalRow, UserDayScore
 from api.models.explain import Attribution, Narrative
+from api.models.feedback import Review, Suppression
 from api.models.features import UserDayFeature
 from api.models.identity import User
 from api.models.ingest import Event, IngestRun
@@ -320,6 +322,24 @@ def _wipe_demo_rows(db: Session) -> None:
         r[0] for r in db.query(Incident.incident_id).filter(Incident.user_id == DEMO_USER_ID).all()
     ]
     if incident_ids:
+        # Two features landed after this function was first written (the
+        # mitigation pipeline and the analyst feedback loop) and both added
+        # tables with a non-cascading FK to incidents.incident_id - without
+        # deleting these first, a demo incident that was ever dismissed via
+        # POST /incidents/{id}/feedback or reviewed via POST .../review (both
+        # real, ordinary things to do to a live-demo incident) makes every
+        # subsequent injection fail with sqlite3.IntegrityError: FOREIGN KEY
+        # constraint failed on the DELETE FROM incidents below.
+        review_ids = [
+            r[0] for r in db.query(Review.review_id)
+            .filter(Review.incident_id.in_(incident_ids)).all()
+        ]
+        if review_ids:
+            db.execute(delete(Suppression).where(Suppression.source_review.in_(review_ids)))
+        db.execute(delete(Review).where(Review.incident_id.in_(incident_ids)))
+        db.execute(delete(AnalystFeedback).where(AnalystFeedback.incident_id.in_(incident_ids)))
+        db.execute(delete(FeatureObservation).where(
+            FeatureObservation.source_incident_id.in_(incident_ids)))
         db.execute(delete(MitigationAction).where(MitigationAction.incident_id.in_(incident_ids)))
         db.execute(delete(Attribution).where(Attribution.incident_id.in_(incident_ids)))
         db.execute(delete(Narrative).where(Narrative.incident_id.in_(incident_ids)))
