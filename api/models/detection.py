@@ -27,7 +27,7 @@ class Signal(Base):
     )
 
     signal_id: Mapped[int] = mapped_column(big_serial(), primary_key=True, autoincrement=True)
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.user_id"), nullable=False)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.user_id"), nullable=False, index=True)
     event_date: Mapped[dt.date] = mapped_column(Date, nullable=False)
     rule_id: Mapped[str] = mapped_column(String, nullable=False)
     category: Mapped[str] = mapped_column(String, nullable=False)

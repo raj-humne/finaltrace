@@ -13,7 +13,7 @@ class Campaign(Base):
     __tablename__ = "campaigns"
 
     campaign_id: Mapped[str] = mapped_column(String, primary_key=True)
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.user_id"), nullable=False)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.user_id"), nullable=False, index=True)
     first_seen: Mapped[dt.date] = mapped_column(nullable=False)
     last_seen: Mapped[dt.date] = mapped_column(nullable=False)
     incident_count: Mapped[int] = mapped_column(Integer, nullable=False)

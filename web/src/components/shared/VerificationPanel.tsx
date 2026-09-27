@@ -47,7 +47,7 @@ export function VerificationPanel({ incidentId }: { incidentId: string }) {
 
       {mutation.isError && (
         <p role="alert" className="mt-2 text-sm text-(--color-status-auto-flag)">
-          Could not issue a token — this incident may no longer be AUTO_FLAG.
+          {(mutation.error as { detail?: string })?.detail ?? "Could not issue a token. Try again."}
         </p>
       )}
 

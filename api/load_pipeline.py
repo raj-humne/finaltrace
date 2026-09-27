@@ -125,18 +125,31 @@ def _persist_events(db: Session, events: pd.DataFrame, config_version: str,
     ))
     db.flush()
 
+    # bulk_insert_mappings, not one db.add() per row: this table can hold
+    # thousands of rows even for the small live-demo dataset, and each ORM
+    # .add() carries identity-map/event-listener overhead that adds up to a
+    # transaction genuinely slow enough to matter - SQLite is a single-
+    # writer database, so a slow write transaction here doesn't just make
+    # THIS request slow, it blocks every other write (including a plain
+    # login's audit-log insert) for as long as it holds the lock. Measured
+    # against the real accumulated demo.db: row-by-row held the lock long
+    # enough that a concurrent login failed outright with "database is
+    # locked" rather than merely waiting.
+    rows = []
     for row in events.itertuples(index=False):
         attrs = {c[2:]: getattr(row, c) for c in events.columns
                  if c.startswith("a_") and pd.notna(getattr(row, c))}
         pc_id = (row.pc_id or None) if isinstance(row.pc_id, str) else row.pc_id
-        db.add(Event(
-            event_id=row.event_id, user_id=row.user_id,
-            pc_id=pc_id, ip_address=pc_to_ip(pc_id),
-            ts=pd.Timestamp(row.ts).to_pydatetime().replace(tzinfo=dt.timezone.utc),
-            event_date=pd.Timestamp(row.date).date(),
-            source=str(row.source), action=str(row.action),
-            attrs=attrs, ingest_run_id=run_id,
-        ))
+        rows.append({
+            "event_id": row.event_id, "user_id": row.user_id,
+            "pc_id": pc_id, "ip_address": pc_to_ip(pc_id),
+            "ts": pd.Timestamp(row.ts).to_pydatetime().replace(tzinfo=dt.timezone.utc),
+            "event_date": pd.Timestamp(row.date).date(),
+            "source": str(row.source), "action": str(row.action),
+            "attrs": attrs, "ingest_run_id": run_id,
+        })
+    if rows:
+        db.bulk_insert_mappings(Event, rows)
     db.commit()
 
 
@@ -147,19 +160,22 @@ def _persist_features(db: Session, features: pd.DataFrame, config_version: str,
     skip = set(self_cols) | set(peer_cols) | {
         "user_id", "date", "cohort_key", "data_completeness", "baseline_maturity"}
 
+    rows = []
     for row in features.itertuples(index=False):
         d = row._asdict()
         feats = {k: v for k, v in d.items() if k not in skip and pd.notna(v) if not isinstance(v, (list, dict))}
         z_self = {c[:-len("__z_self")]: d[c] for c in self_cols if pd.notna(d[c])}
         z_peer = {c[:-len("__z_peer")]: d[c] for c in peer_cols if pd.notna(d[c])}
-        db.add(UserDayFeature(
-            user_id=row.user_id, event_date=pd.Timestamp(row.date).date(),
-            cohort_key=str(getattr(row, "cohort_key", "unknown")),
-            features=_json_safe(feats), z_self=_json_safe(z_self), z_peer=_json_safe(z_peer),
-            data_completeness=float(getattr(row, "data_completeness", 1.0)),
-            baseline_maturity=float(getattr(row, "baseline_maturity", 0.0)),
-            config_version=config_version,
-        ))
+        rows.append({
+            "user_id": row.user_id, "event_date": pd.Timestamp(row.date).date(),
+            "cohort_key": str(getattr(row, "cohort_key", "unknown")),
+            "features": _json_safe(feats), "z_self": _json_safe(z_self), "z_peer": _json_safe(z_peer),
+            "data_completeness": float(getattr(row, "data_completeness", 1.0)),
+            "baseline_maturity": float(getattr(row, "baseline_maturity", 0.0)),
+            "config_version": config_version,
+        })
+    if rows:
+        db.bulk_insert_mappings(UserDayFeature, rows)
     db.commit()
 
 
@@ -187,6 +203,7 @@ def _persist_user_day_scores(db: Session, pipeline: Pipeline, cfg, config_versio
 
     half_life_days = cfg.detection.get("risk_decay", {}).get("half_life_days")
     risk_series_by_user: dict[str, list[tuple[dt.date, float]]] = {}
+    score_rows: list[dict] = []
 
     for row in pipeline.features.itertuples(index=False):
         user_id = row.user_id
@@ -211,14 +228,16 @@ def _persist_user_day_scores(db: Session, pipeline: Pipeline, cfg, config_versio
         risk, breakdown, _ = compute_risk(signals, anomaly_pctl, corr, cfg)
         confidence, _ = compute_confidence(signals, anomaly_pctl, completeness, maturity, cfg)
 
-        db.add(UserDayScore(
-            user_id=user_id, event_date=date, risk=risk, confidence=confidence,
-            logit=breakdown.total_logit, rule_points=breakdown.rule_points,
-            ml_points=breakdown.ml_points, corr_points=breakdown.correlation_points,
-            anomaly_pctl=anomaly_pctl, risk_ewma=None, config_version=config_version,
-        ))
+        score_rows.append({
+            "user_id": user_id, "event_date": date, "risk": risk, "confidence": confidence,
+            "logit": breakdown.total_logit, "rule_points": breakdown.rule_points,
+            "ml_points": breakdown.ml_points, "corr_points": breakdown.correlation_points,
+            "anomaly_pctl": anomaly_pctl, "risk_ewma": None, "config_version": config_version,
+        })
         risk_series_by_user.setdefault(user_id, []).append((date, risk))
 
+    if score_rows:
+        db.bulk_insert_mappings(UserDayScore, score_rows)
     db.flush()
 
     if half_life_days:

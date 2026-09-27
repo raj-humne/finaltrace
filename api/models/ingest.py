@@ -38,7 +38,7 @@ class Event(Base):
     )
 
     event_id: Mapped[str] = mapped_column(String, primary_key=True)
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.user_id"), nullable=False)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.user_id"), nullable=False, index=True)
     pc_id: Mapped[str | None] = mapped_column(String)
     ip_address: Mapped[str | None] = mapped_column(String)
     ts: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
