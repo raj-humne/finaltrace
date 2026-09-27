@@ -40,8 +40,9 @@ from engine.core.config import load_config
 from engine.correlate.incident import Incident as EngineIncident
 from engine.explain.counterfactual import counterfactual_deltas, minimal_sufficient_set
 from engine.explain.narrative import build_narrative
-from engine.detect.scoring import CorrelationInputs, compute_risk
+from engine.detect.scoring import CorrelationInputs, compute_confidence, compute_risk
 from engine.run import Pipeline
+from api.models.detection import UserDayScore
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 BRIDGE_RUN_ID = "run_pipeline_bridge"
@@ -53,7 +54,7 @@ def _wipe(db: Session) -> None:
     seed data in them FKs into incidents/signals, so they must go first."""
     for model in (Suppression, Review, Attribution, Narrative, IncidentEdge,
                   IncidentEvent, SignalRow, Incident, Campaign,
-                  UserDayFeature, Event, UserOrg):
+                  UserDayScore, UserDayFeature, Event, UserOrg):
         db.execute(delete(model))
     db.execute(delete(IngestRun).where(IngestRun.run_id == BRIDGE_RUN_ID))
     db.commit()
@@ -103,9 +104,14 @@ def _persist_users_and_org(db: Session, org: pd.DataFrame, events: pd.DataFrame)
     db.flush()
 
 
-def _persist_events(db: Session, events: pd.DataFrame, config_version: str) -> None:
-    db.add(IngestRun(
-        run_id=BRIDGE_RUN_ID,
+def _persist_events(db: Session, events: pd.DataFrame, config_version: str,
+                    run_id: str = BRIDGE_RUN_ID) -> None:
+    """`run_id` is additive (defaults to the original bridge constant, so the
+    full-corpus load path is unaffected) - api/live_demo.py passes a distinct
+    id so a demo re-persist never collides with IngestRun's primary key on a
+    row the main corpus bridge already inserted."""
+    db.merge(IngestRun(
+        run_id=run_id,
         started_at=dt.datetime.now(dt.timezone.utc),
         finished_at=dt.datetime.now(dt.timezone.utc),
         status="success",
@@ -125,7 +131,7 @@ def _persist_events(db: Session, events: pd.DataFrame, config_version: str) -> N
             ts=pd.Timestamp(row.ts).to_pydatetime().replace(tzinfo=dt.timezone.utc),
             event_date=pd.Timestamp(row.date).date(),
             source=str(row.source), action=str(row.action),
-            attrs=attrs, ingest_run_id=BRIDGE_RUN_ID,
+            attrs=attrs, ingest_run_id=run_id,
         ))
     db.commit()
 
@@ -151,6 +157,96 @@ def _persist_features(db: Session, features: pd.DataFrame, config_version: str,
             config_version=config_version,
         ))
     db.commit()
+
+
+def _persist_user_day_scores(db: Session, pipeline: Pipeline, cfg, config_version: str) -> None:
+    """One row per scored user-day (docs/03-DATA-MODEL section 5's
+    user_day_scores), not only days that grew into a multi-event incident.
+    api/routers/users.py's /users/{id} and /users/{id}/risk - and therefore
+    the dashboard's whole "risk over time" chart and "days of history" text -
+    read every day from this table. Without it, every user shows empty
+    history regardless of how much real activity or signal firing they have.
+
+    A day that fired signals but never correlated into an incident (FR-4.2
+    requires >= 2 events) still gets a real standalone score here, mirroring
+    engine.run.print_day's "standalone day score" branch exactly - same
+    compute_risk/compute_confidence calls, just with CorrelationInputs()
+    defaults instead of the incident's actual correlation inputs.
+    """
+    incident_for_user_date: dict[tuple[str, dt.date], EngineIncident] = {}
+    for inc in pipeline.incidents:
+        d = inc.window_start.date()
+        end = inc.window_end.date()
+        while d <= end:
+            incident_for_user_date[(inc.user_id, d)] = inc
+            d += dt.timedelta(days=1)
+
+    half_life_days = cfg.detection.get("risk_decay", {}).get("half_life_days")
+    risk_series_by_user: dict[str, list[tuple[dt.date, float]]] = {}
+
+    for row in pipeline.features.itertuples(index=False):
+        user_id = row.user_id
+        date = pd.Timestamp(row.date).date()
+        anomaly_pctl = getattr(row, "anomaly_percentile", None)
+        completeness = float(getattr(row, "data_completeness", 1.0))
+        maturity = float(getattr(row, "baseline_maturity", 0.0))
+
+        inc = incident_for_user_date.get((user_id, date))
+        if inc is not None:
+            corr = CorrelationInputs(
+                distinct_categories=inc.category_count,
+                stage_advances=max(0, len(inc.stages) - 1),
+                proximity_factor=0.0 if inc.over_dense else 1.0,
+                over_dense=inc.over_dense,
+            )
+            signals = inc.signals
+        else:
+            corr = CorrelationInputs()
+            signals = pipeline.signals_by_day.get((user_id, date), [])
+
+        risk, breakdown, _ = compute_risk(signals, anomaly_pctl, corr, cfg)
+        confidence, _ = compute_confidence(signals, anomaly_pctl, completeness, maturity, cfg)
+
+        db.add(UserDayScore(
+            user_id=user_id, event_date=date, risk=risk, confidence=confidence,
+            logit=breakdown.total_logit, rule_points=breakdown.rule_points,
+            ml_points=breakdown.ml_points, corr_points=breakdown.correlation_points,
+            anomaly_pctl=anomaly_pctl, risk_ewma=None, config_version=config_version,
+        ))
+        risk_series_by_user.setdefault(user_id, []).append((date, risk))
+
+    db.flush()
+
+    if half_life_days:
+        _apply_risk_ewma(db, risk_series_by_user, float(half_life_days))
+
+    db.commit()
+
+
+def _apply_risk_ewma(db: Session, risk_series_by_user: dict[str, list[tuple[dt.date, float]]],
+                     half_life_days: float) -> None:
+    """Gap-aware exponential decay (docs/02-ARCHITECTURE section 11 /
+    config/detection.yaml's risk_decay.half_life_days): a day with no prior
+    activity for `half_life_days` carries half the weight of yesterday, so a
+    quiet stretch lets the trailing risk actually cool off rather than
+    freezing at its last value."""
+    for user_id, series in risk_series_by_user.items():
+        series.sort(key=lambda t: t[0])
+        ewma = None
+        prev_date = None
+        for date, risk in series:
+            if ewma is None:
+                ewma = risk
+            else:
+                gap_days = (date - prev_date).days
+                decay = 0.5 ** (gap_days / half_life_days)
+                ewma = decay * ewma + (1 - decay) * risk
+            db.execute(
+                UserDayScore.__table__.update()
+                .where(UserDayScore.user_id == user_id, UserDayScore.event_date == date)
+                .values(risk_ewma=ewma)
+            )
+            prev_date = date
 
 
 def _json_safe(d: dict) -> dict:
@@ -308,6 +404,8 @@ def main(argv: list[str] | None = None) -> int:
         _persist_events(db, pipeline.events, cfg.version)
         print("persisting features...")
         _persist_features(db, pipeline.features, cfg.version, cfg.features["baselined_features"])
+        print("persisting user-day scores...")
+        _persist_user_day_scores(db, pipeline, cfg, cfg.version)
         print("persisting incidents, signals, evidence, narratives, campaigns...")
         _persist_incidents(db, pipeline, cfg.version, cfg)
         print("done.")
