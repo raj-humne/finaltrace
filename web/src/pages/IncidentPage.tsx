@@ -9,6 +9,7 @@ import type { TriageLane } from "@/lib/design";
 import { CorrelationGraph } from "@/components/shared/CorrelationGraph";
 import { SignalCard } from "@/components/shared/SignalCard";
 import { MitigationPanel } from "@/components/shared/MitigationPanel";
+import { FeedbackDialog } from "@/components/shared/FeedbackDialog";
 import { VerdictForm } from "@/components/shared/VerdictForm";
 import { AskAssistant } from "@/components/shared/AskAssistant";
 import { ErrorState } from "@/components/shared/EmptyState";
@@ -115,7 +116,10 @@ export function IncidentPage() {
               )}
             </p>
           </div>
-          <span className="shrink-0 font-mono-tab text-xs text-(--color-ink-muted)">{incident.incident_id}</span>
+          <div className="flex shrink-0 flex-col items-end gap-2">
+            <span className="font-mono-tab text-xs text-(--color-ink-muted)">{incident.incident_id}</span>
+            <FeedbackDialog incidentId={incident.incident_id!} disabled={incident.disposition === "false_positive"} />
+          </div>
         </div>
       </div>
 

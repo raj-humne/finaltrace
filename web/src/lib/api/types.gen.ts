@@ -300,6 +300,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/incidents/{incident_id}/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit Incident Feedback
+         * @description Analyst Feedback Loop for False-Positive Reduction (Challenge 2).
+         *
+         *     Distinct from POST /{incident_id}/review above: a review's verdict is a
+         *     general SOC disposition and never touches behavioral baselines or
+         *     correlation-edge weights. This endpoint exists specifically for "the
+         *     analyst is telling the system this exact pattern is not a threat, and
+         *     the system should learn from it" - it records an AnalystFeedback row,
+         *     closes the incident as a false positive, and (when apply_to_similar is
+         *     true) recomputes this user's Pandas-derived behavioral baseline and
+         *     decays this user's learned correlation-edge weights for the incident's
+         *     evidence chain (api/feedback.py::submit_feedback).
+         *
+         *     The authenticated account (already required at the router level) is used
+         *     as the analyst identity, rather than trusting a client-supplied
+         *     analyst_id like the older /review endpoint does.
+         */
+        post: operations["submit_incident_feedback_api_v1_incidents__incident_id__feedback_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/campaigns": {
         parameters: {
             query?: never;
@@ -752,6 +786,19 @@ export interface components {
                 [key: string]: number;
             } | null;
         };
+        /** BaselineUpdateOut */
+        BaselineUpdateOut: {
+            /** Feature Name */
+            feature_name: string;
+            /** Mean Value */
+            mean_value: number;
+            /** Std Value */
+            std_value: number;
+            /** P95 Value */
+            p95_value: number;
+            /** Sample Count */
+            sample_count: number;
+        };
         /** Calibration */
         Calibration: {
             /** Bins */
@@ -883,6 +930,60 @@ export interface components {
             top_firing_rules: components["schemas"]["TopFiringRule"][];
             /** Warnings */
             warnings: string[];
+        };
+        /** EdgeUpdateOut */
+        EdgeUpdateOut: {
+            /** Source Event Type */
+            source_event_type: string;
+            /** Target Event Type */
+            target_event_type: string;
+            /** False Positive Count */
+            false_positive_count: number;
+            /** Original Weight */
+            original_weight: number;
+            /** Current Weight */
+            current_weight: number;
+        };
+        /** FeedbackRequest */
+        FeedbackRequest: {
+            /**
+             * Verdict
+             * @constant
+             */
+            verdict: "false_positive";
+            /**
+             * Reason Code
+             * @enum {string}
+             */
+            reason_code: "approved_business_activity" | "expected_off_hours_work" | "known_usb_workflow" | "known_host_access" | "expected_bulk_access" | "test_or_training" | "other";
+            /** Comment */
+            comment?: string | null;
+            /**
+             * Apply To Similar
+             * @default true
+             */
+            apply_to_similar: boolean;
+        };
+        /** FeedbackResponse */
+        FeedbackResponse: {
+            /** Incident Id */
+            incident_id: string;
+            /** Incident Status */
+            incident_status: string;
+            /** Disposition */
+            disposition: string | null;
+            /** Feedback Id */
+            feedback_id: number;
+            /** Updated Baselines */
+            updated_baselines: components["schemas"]["BaselineUpdateOut"][];
+            /** Updated Edges */
+            updated_edges: components["schemas"]["EdgeUpdateOut"][];
+            score_impact: components["schemas"]["ScoreImpactOut"];
+            /**
+             * Processed At
+             * Format: date-time
+             */
+            processed_at: string;
         };
         /** GraphEdgeOut */
         GraphEdgeOut: {
@@ -1021,6 +1122,8 @@ export interface components {
             campaign: components["schemas"]["CampaignRef"] | null;
             /** Status */
             status: string;
+            /** Disposition */
+            disposition?: string | null;
             review: components["schemas"]["ReviewOut"] | null;
             /** Mitigations */
             mitigations: components["schemas"]["MitigationActionOut"][];
@@ -1517,6 +1620,15 @@ export interface components {
             total_logit: number;
             /** Tau */
             tau: number;
+        };
+        /** ScoreImpactOut */
+        ScoreImpactOut: {
+            /** Original Risk */
+            original_risk: number;
+            /** Predicted Similar Risk */
+            predicted_similar_risk: number;
+            /** Expected Reduction */
+            expected_reduction: number;
         };
         /** ScoreOut */
         ScoreOut: {
@@ -2288,6 +2400,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReviewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_incident_feedback_api_v1_incidents__incident_id__feedback_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incident_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FeedbackRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeedbackResponse"];
                 };
             };
             /** @description Validation Error */

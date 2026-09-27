@@ -132,6 +132,7 @@ class IncidentDetailOut(ApiModel):
     attribution: AttributionOut
     campaign: CampaignRef | None
     status: str
+    disposition: str | None = None
     review: ReviewOut | None
     mitigations: list[MitigationActionOut]
     config_version: str

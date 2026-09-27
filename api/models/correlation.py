@@ -29,6 +29,10 @@ class Incident(Base):
             "triage_lane IN ('AUTO_FLAG','ANALYST_REVIEW','MONITOR','SUPPRESSED')", name="ck_incident_lane"
         ),
         CheckConstraint("status IN ('open','in_review','closed')", name="ck_incident_status"),
+        CheckConstraint(
+            "disposition IS NULL OR disposition IN ('false_positive','confirmed_threat','benign','inconclusive')",
+            name="ck_incident_disposition",
+        ),
     )
 
     incident_id: Mapped[str] = mapped_column(String, primary_key=True)
@@ -51,6 +55,16 @@ class Incident(Base):
         DateTime(timezone=True), default=lambda: dt.datetime.now(dt.timezone.utc), nullable=False
     )
     config_version: Mapped[str] = mapped_column(String, nullable=False)
+    # Analyst Feedback Loop (Challenge 2, spec A.5): `disposition` records
+    # *why* a closed incident is closed, distinct from the coarse `status`
+    # column above - a `status='closed'` incident can be closed via the
+    # existing Review flow (confirmed_threat/benign) or via a false-positive
+    # dismissal (api/feedback.py); only the latter drives baseline/edge
+    # learning. Raw evidence (events/signals/attributions) is never touched.
+    disposition: Mapped[str | None] = mapped_column(String)
+    disposition_reason: Mapped[str | None] = mapped_column(String)
+    dismissed_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+    dismissed_by: Mapped[str | None] = mapped_column(String)
 
 
 class IncidentEvent(Base):

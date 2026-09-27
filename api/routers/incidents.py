@@ -17,6 +17,15 @@ from api.models.identity import User, UserOrg
 from api.models.ingest import Event
 from api.models.mitigation import MitigationAction
 from api.assistant import AssistantUnavailable, answer_incident_question
+from api.feedback import FeedbackError, IncidentAlreadyDismissed, submit_feedback
+from api.models.identity import Account
+from api.schemas.analyst_feedback import (
+    BaselineUpdateOut,
+    EdgeUpdateOut,
+    FeedbackRequest,
+    FeedbackResponse,
+    ScoreImpactOut,
+)
 from api.schemas.incidents import (
     AskRequest,
     AskResponse,
@@ -327,6 +336,7 @@ def get_incident(incident_id: str, db: Session = Depends(get_db)) -> IncidentDet
         ),
         campaign=campaign_ref,
         status=incident.status,
+        disposition=incident.disposition,
         review=ReviewOut(
             review_id=latest_review.review_id, verdict=latest_review.verdict, note=latest_review.note,
             analyst_id=latest_review.analyst_id, reviewed_at=latest_review.reviewed_at,
@@ -479,4 +489,51 @@ def review_incident(
         incident_status=incident.status,
         suppression=suppression_out,
         effects=ReviewEffects(rule_stats_updated=sorted(set(rule_ids)), user_risk_ewma_adjusted=False),
+    )
+
+
+@router.post("/{incident_id}/feedback", response_model=FeedbackResponse, status_code=201)
+def submit_incident_feedback(
+    incident_id: str,
+    payload: FeedbackRequest,
+    db: Session = Depends(get_db),
+    account: Account = Depends(get_current_account),
+) -> FeedbackResponse:
+    """Analyst Feedback Loop for False-Positive Reduction (Challenge 2).
+
+    Distinct from POST /{incident_id}/review above: a review's verdict is a
+    general SOC disposition and never touches behavioral baselines or
+    correlation-edge weights. This endpoint exists specifically for "the
+    analyst is telling the system this exact pattern is not a threat, and
+    the system should learn from it" - it records an AnalystFeedback row,
+    closes the incident as a false positive, and (when apply_to_similar is
+    true) recomputes this user's Pandas-derived behavioral baseline and
+    decays this user's learned correlation-edge weights for the incident's
+    evidence chain (api/feedback.py::submit_feedback).
+
+    The authenticated account (already required at the router level) is used
+    as the analyst identity, rather than trusting a client-supplied
+    analyst_id like the older /review endpoint does.
+    """
+    incident = _get_incident_or_404(db, incident_id)
+    try:
+        result = submit_feedback(
+            db, incident, analyst_id=account.username, verdict=payload.verdict,
+            reason_code=payload.reason_code, comment=payload.comment,
+            apply_to_similar=payload.apply_to_similar,
+        )
+    except IncidentAlreadyDismissed as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+    except FeedbackError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    return FeedbackResponse(
+        incident_id=result.incident.incident_id,
+        incident_status=result.incident.status,
+        disposition=result.incident.disposition,
+        feedback_id=result.feedback.id,
+        updated_baselines=[BaselineUpdateOut(**vars(b)) for b in result.baselines],
+        updated_edges=[EdgeUpdateOut(**vars(e)) for e in result.edges],
+        score_impact=ScoreImpactOut(**vars(result.score_impact)),
+        processed_at=result.feedback.created_at,
     )

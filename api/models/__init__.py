@@ -1,5 +1,6 @@
 """Import every model module so Base.metadata is complete for Alembic and create_all."""
 from api.db.base import Base
+from api.models.analyst_feedback import AnalystFeedback, BehavioralBaseline, EdgeFeedbackWeight, FeatureObservation
 from api.models.correlation import Campaign, Incident, IncidentEdge, IncidentEvent
 from api.models.detection import ConfigVersion, Signal, UserDayScore
 from api.models.evaluation import GroundTruth
@@ -33,4 +34,8 @@ __all__ = [
     "Suppression",
     "GroundTruth",
     "MitigationAction",
+    "AnalystFeedback",
+    "BehavioralBaseline",
+    "EdgeFeedbackWeight",
+    "FeatureObservation",
 ]
