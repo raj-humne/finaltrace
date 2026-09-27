@@ -13,6 +13,7 @@ from api.routers import (
     health,
     incidents,
     ingest,
+    live_demo,
     rules,
     suppressions,
     users,
@@ -43,3 +44,4 @@ app.include_router(detection_health.router, prefix=api_v1)
 app.include_router(eval_router.router, prefix=api_v1)
 app.include_router(analyze.router, prefix=api_v1)
 app.include_router(ingest.router, prefix=api_v1)
+app.include_router(live_demo.router, prefix=api_v1)

@@ -64,6 +64,9 @@ class Pipeline:
         self.ingest_report: IngestReport | None = None
 
     def run(self, raw_dir: Path) -> "Pipeline":
+        """Full batch pipeline: read raw CSVs from `raw_dir`, then run every
+        stage via `run_from_frames`. Unchanged behaviour from before this was
+        split - this is a pure refactor, not a new code path."""
         def _checkpoint(stage: str) -> None:
             rss = _peak_rss_mb()
             if rss is not None:
@@ -72,6 +75,26 @@ class Pipeline:
         self.events, self.ingest_report = load_events(raw_dir, self.cfg)
         self.org = load_org(raw_dir)
         _checkpoint("load_events + load_org")
+
+        return self.run_from_frames(self.events, self.org, _checkpoint=_checkpoint)
+
+    def run_from_frames(self, events: pd.DataFrame, org: pd.DataFrame,
+                        _checkpoint=lambda stage: None) -> "Pipeline":
+        """Every stage after ingest, given already-loaded event/org frames
+        instead of a raw_dir to read from disk.
+
+        This is what makes a live, on-demand rescore possible (a narrow
+        recompute endpoint can hold events in memory - or already in the DB -
+        and re-run the real detection stack in seconds, without a disk round
+        trip through CSVs and without touching `run()`'s batch path at all):
+        the engine was always CSV-in by design (docs/02-ARCHITECTURE.md
+        section 6), and this does not change that for the batch path - `run`
+        still reads from `raw_dir` exactly as before. It only exposes the
+        part of the pipeline that never actually needed a filesystem in the
+        first place as its own entry point.
+        """
+        self.events = events
+        self.org = org
 
         feats = build_features(self.events, self.org, self.cfg)
         _checkpoint("build_features")
