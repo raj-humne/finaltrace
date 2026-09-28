@@ -7,76 +7,147 @@
 @import "@fontsource/jetbrains-mono/400.css";
 @import "@fontsource/jetbrains-mono/500.css";
 
+@font-face {
+  font-family: 'Akira Expanded';
+  font-style: normal;
+  font-weight: 100 900;
+  src: url('/fonts/akira-expanded.woff') format('woff'),
+       url('https://fonts.cdnfonts.com/s/37506/Akira%20Expanded%20Demo.woff') format('woff');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Mont';
+  font-style: normal;
+  font-weight: 100 400;
+  src: url('/fonts/mont-extralight.woff') format('woff'),
+       url('https://fonts.cdnfonts.com/s/16467/Mont-ExtraLightDEMO.woff') format('woff');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Mont';
+  font-style: normal;
+  font-weight: 700 900;
+  src: url('/fonts/mont-heavy.woff') format('woff'),
+       url('https://fonts.cdnfonts.com/s/16467/Mont-HeavyDEMO.woff') format('woff');
+  font-display: swap;
+}
+
+.font-akira {
+  font-family: 'Akira Expanded', system-ui, sans-serif;
+  letter-spacing: 0.04em;
+}
+
+.font-mont {
+  font-family: 'Mont', system-ui, sans-serif;
+}
+
+.text-stroke-white {
+  -webkit-text-stroke: 2px #FBFBFB;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+@media (min-width: 768px) {
+  .text-stroke-white {
+    -webkit-text-stroke: 2.5px #FBFBFB;
+  }
+}
+
+.trace-letter {
+  display: inline-block;
+  -webkit-text-stroke: 2px #FBFBFB;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  transition: -webkit-text-fill-color 0.2s ease, color 0.2s ease;
+  cursor: pointer;
+  user-select: none;
+}
+
+@media (min-width: 768px) {
+  .trace-letter {
+    -webkit-text-stroke: 2.5px #FBFBFB;
+  }
+}
+
+.trace-letter:hover,
+.trace-letter.trace-letter-active {
+  -webkit-text-fill-color: #FBFBFB !important;
+  color: #FBFBFB !important;
+}
+
 :root {
   --font-interface: "Archivo", ui-sans-serif, system-ui, sans-serif;
   --font-narrative: "Source Serif 4", Georgia, serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-akira: "Akira Expanded", system-ui, sans-serif;
 
-  /* Surfaces and ink — light (default in :root, overridden dark below).
-     One theme app-wide: white cards on a soft slate ground, indigo accent. */
-  --color-page: #F6F7FB;
-  --color-surface: #FFFFFF;
-  --color-surface-raised: #FFFFFF;
-  --color-ink: #0F172A;
-  --color-ink-secondary: #64748B;
-  --color-ink-muted: #94A3B8;
-  --color-hairline: #E2E8F0;
-  --color-gridline: #EEF0F4;
+  /* Theme Color Palette:
+     Lilac Ash: #BCABAE
+     Onyx:      #0F0F0F
+     Graphite:  #2D2E2E
+     Dim Grey:  #716969
+     White:     #FBFBFB
+  */
+  --color-page: #0F0F0F;
+  --color-surface: #2D2E2E;
+  --color-surface-raised: #3A3B3B;
+  --color-ink: #FBFBFB;
+  --color-ink-secondary: #BCABAE;
+  --color-ink-muted: #716969;
+  --color-hairline: rgba(113, 105, 105, 0.4);
+  --color-gridline: rgba(45, 46, 46, 0.8);
 
-  /* Primary interactive accent — buttons, focus rings, active nav. Distinct
-     from --color-source-logon, which is a data color (the "logon" source)
-     and must stay reserved for that. */
-  --color-accent: #4F46E5;
-  --color-accent-ink: #FFFFFF;
+  /* Primary interactive accent */
+  --color-accent: #BCABAE;
+  --color-accent-ink: #0F0F0F;
 
-  /* Categorical — five log sources (light) */
-  --color-source-file: #1baf7a;
-  --color-source-logon: #2a78d6;
-  --color-source-email: #eda100;
-  --color-source-device: #4a3aa7;
-  --color-source-http: #e87ba4;
+  /* Categorical — five log sources */
+  --color-source-file: #BCABAE;
+  --color-source-logon: #716969;
+  --color-source-email: #FBFBFB;
+  --color-source-device: #2D2E2E;
+  --color-source-http: #BCABAE;
 
   /* Sequential — ember risk ramp */
-  --color-ember-100: #FDE4C8;
-  --color-ember-200: #F9C68B;
-  --color-ember-300: #F0A24E;
-  --color-ember-400: #DE7F1C;
-  --color-ember-500: #B9640F;
-  --color-ember-600: #8F4B0C;
-  --color-ember-700: #6A360A;
+  --color-ember-100: #FBFBFB;
+  --color-ember-200: #BCABAE;
+  --color-ember-300: #93898A;
+  --color-ember-400: #716969;
+  --color-ember-500: #4B4646;
+  --color-ember-600: #2D2E2E;
+  --color-ember-700: #0F0F0F;
 
-  /* Kill-chain stage ramp (blue) */
-  --color-stage-100: #cde2fb;
-  --color-stage-700: #184f95;
+  /* Kill-chain stage ramp */
+  --color-stage-100: #716969;
+  --color-stage-700: #BCABAE;
 
-  /* Status — reserved */
+  /* Status */
   --color-status-auto-flag: #d03b3b;
   --color-status-review: #ec835a;
   --color-status-monitor: #fab219;
   --color-status-suppressed: var(--color-ink-muted);
 }
 
-/* Dark stays available via the toggle (originally the default, still fully
-   validated per docs/06 section 4) — but light is now the app-wide default,
-   so it no longer auto-activates from OS preference alone. */
 :root[data-theme="dark"] {
-  --color-page: #0E1315;
-  --color-surface: #151B1E;
-  --color-surface-raised: #1C2428;
-  --color-ink: #F2F5F6;
-  --color-ink-secondary: #A9B6BA;
-  --color-ink-muted: #6F7D82;
-  --color-hairline: rgba(242, 245, 246, 0.10);
-  --color-gridline: #232C30;
+  --color-page: #0F0F0F;
+  --color-surface: #2D2E2E;
+  --color-surface-raised: #3A3B3B;
+  --color-ink: #FBFBFB;
+  --color-ink-secondary: #BCABAE;
+  --color-ink-muted: #716969;
+  --color-hairline: rgba(113, 105, 105, 0.4);
+  --color-gridline: rgba(45, 46, 46, 0.8);
 
-  --color-accent: #818CF8;
-  --color-accent-ink: #0E1315;
+  --color-accent: #BCABAE;
+  --color-accent-ink: #0F0F0F;
 
-  --color-source-file: #199e70;
-  --color-source-logon: #3987e5;
-  --color-source-email: #c98500;
-  --color-source-device: #9085e9;
-  --color-source-http: #d55181;
+  --color-source-file: #BCABAE;
+  --color-source-logon: #716969;
+  --color-source-email: #FBFBFB;
+  --color-source-device: #2D2E2E;
+  --color-source-http: #BCABAE;
 }
 
 @theme inline {
@@ -187,3 +258,98 @@ body {
     transition-duration: 0.001ms !important;
   }
 }
+
+/* Premium Frosted Glassmorphism with transparency to reveal the kinetic grid */
+.glass-container {
+  background: rgba(20, 21, 24, 0.38) !important;
+  backdrop-filter: blur(10px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(140%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 16px 40px 0 rgba(0, 0, 0, 0.45), inset 0 1px 1px 0 rgba(255, 255, 255, 0.14) !important;
+}
+
+.glass-card {
+  background: rgba(26, 28, 32, 0.32) !important;
+  backdrop-filter: blur(8px) saturate(130%) !important;
+  -webkit-backdrop-filter: blur(8px) saturate(130%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.11) !important;
+  box-shadow: 0 8px 24px 0 rgba(0, 0, 0, 0.35), inset 0 1px 1px 0 rgba(255, 255, 255, 0.12) !important;
+}
+
+.glass-subtle {
+  background: rgba(255, 255, 255, 0.04) !important;
+  backdrop-filter: blur(6px) saturate(120%) !important;
+  -webkit-backdrop-filter: blur(6px) saturate(120%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+/* 3D Perspective & Hardware Acceleration for GSAP Tilt */
+.glass-container,
+.glass-card,
+.font-akira,
+h1,
+h2,
+h3 {
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+/* Animated Interactive Theme Dropdown */
+@keyframes themeDropdownSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes themeDropdownSlideOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+}
+
+.theme-select-content[data-state="open"] {
+  animation: themeDropdownSlideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.theme-select-content[data-state="closed"] {
+  animation: themeDropdownSlideOut 0.14s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.theme-select-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.8125rem;
+  color: #BCABAE;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.theme-select-item[data-highlighted] {
+  background: rgba(255, 255, 255, 0.08);
+  color: #FBFBFB;
+  transform: translateX(4px);
+}
+
+.theme-select-item[data-state="checked"] {
+  color: #FBFBFB;
+  font-weight: 600;
+  background: rgba(188, 171, 174, 0.12);
+}
+
+
+

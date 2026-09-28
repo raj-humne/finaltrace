@@ -13,21 +13,21 @@ interface KpiCardProps {
 export function KpiCard({ icon: Icon, label, value, delta, className }: KpiCardProps) {
   const positive = (delta?.pct ?? 0) >= 0;
   return (
-    <div className={cn("rounded-xl border border-slate-200 bg-white p-5", className)}>
+    <div className={cn("glass-card rounded-xl p-5", className)}>
       <div className="flex items-center gap-2.5">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50">
-          <Icon className="h-4 w-4 text-indigo-600" aria-hidden />
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.08] text-[#BCABAE]">
+          <Icon className="h-4 w-4" aria-hidden />
         </span>
-        <span className="text-sm text-slate-500">{label}</span>
+        <span className="text-sm font-medium text-[#BCABAE]">{label}</span>
       </div>
-      <p className="mt-4 text-[1.75rem] font-semibold leading-none tracking-tight text-slate-900">{value}</p>
+      <p className="mt-4 text-[1.75rem] font-bold leading-none tracking-tight text-[#FBFBFB]">{value}</p>
       {delta && (
         <div className="mt-3 flex items-center gap-2 text-xs">
-          <span className={cn("rounded-full px-2 py-0.5 font-medium", positive ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700")}>
+          <span className={cn("rounded-full px-2 py-0.5 font-medium", positive ? "bg-emerald-950/60 text-emerald-400 border border-emerald-800/40" : "bg-rose-950/60 text-rose-400 border border-rose-800/40")}>
             {positive ? "+" : ""}
             {delta.pct.toFixed(1)}%
           </span>
-          <span className="text-slate-400">{delta.caption}</span>
+          <span className="text-[#BCABAE]/70">{delta.caption}</span>
         </div>
       )}
     </div>

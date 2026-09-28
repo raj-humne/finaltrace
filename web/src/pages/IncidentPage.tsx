@@ -123,7 +123,7 @@ export function IncidentPage() {
           identical cards. Only the correlation graph and evidence list get
           their own visual weight below because they're genuinely instruments
           and a set, not prose (docs/06 section 5.2). */}
-      <div className="divide-y divide-(--color-hairline) rounded-lg border border-(--color-hairline) bg-(--color-surface-raised)">
+      <div className="glass-container divide-y divide-white/10 rounded-2xl overflow-hidden">
         <div className="flex items-start gap-8 p-4">
           <LaneChip lane={(incident.score?.triage_lane as TriageLane) ?? "MONITOR"} className="mt-1 shrink-0" />
           <ScoreMeter label="Risk" value={risk} threshold={incident.attribution?.alert_threshold ?? 40} thresholdLabel={`alert at ${incident.attribution?.alert_threshold ?? 40}`} className="flex-1" />

@@ -58,6 +58,7 @@ function problem(res, status, title, detail) {
 const DEMO_USERS = {
   "priya.s": { password: "analyst-demo", analyst_id: "priya.s", name: "Priya Sharma", role: "analyst" },
   "anjali.m": { password: "engineer-demo", analyst_id: "anjali.m", name: "Anjali Mehta", role: "detection_engineer" },
+  "riya": { password: "123456", analyst_id: "riya", name: "Riya", role: "analyst" },
 };
 const SESSIONS = new Map();
 

@@ -18,7 +18,7 @@ export function IncidentRow({ item }: { item: IncidentListItem }) {
   return (
     <Link
       to={`/incidents/${item.incident_id}`}
-      className="flex flex-col gap-2 border-b border-(--color-hairline) px-4 py-3 hover:bg-(--color-surface) sm:grid sm:grid-cols-[auto_auto_1fr] sm:items-start sm:gap-x-4 sm:gap-y-1.5"
+      className="flex flex-col gap-2 border-b border-white/[0.08] px-5 py-3.5 hover:bg-white/[0.06] transition-colors sm:grid sm:grid-cols-[auto_auto_1fr] sm:items-start sm:gap-x-4 sm:gap-y-1.5"
     >
       <div className="flex items-center gap-3 sm:w-28 sm:flex-col sm:items-start sm:gap-1.5">
         <LaneChip lane={(item.triage_lane as TriageLane) ?? "MONITOR"} />

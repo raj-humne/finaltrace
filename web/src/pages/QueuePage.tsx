@@ -1,7 +1,6 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Inbox } from "lucide-react";
 import { useIncidents } from "@/hooks/useIncidents";
 import { IncidentRow } from "@/components/shared/IncidentRow";
 import { EmptyState, ErrorState } from "@/components/shared/EmptyState";
@@ -9,6 +8,8 @@ import { IncidentRowSkeleton, Skeleton } from "@/components/shared/Skeleton";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { LANES, type TriageLane } from "@/lib/design";
 import { cn } from "@/lib/utils";
+import { SplitHeading } from "@/components/shared/SplitHeading";
+import { ThemeSelect, type ThemeSelectOption } from "@/components/ui/ThemeSelect";
 
 const LANE_FILTERS: (TriageLane | "ALL")[] = ["ALL", "AUTO_FLAG", "ANALYST_REVIEW", "MONITOR", "SUPPRESSED"];
 const STAGE_FILTERS = [
@@ -52,11 +53,15 @@ export function QueuePage() {
 
   // The live API always returns risk-desc and ignores `sort` (Track B, see
   // api/routers/incidents.py), so honour the sort choice client-side.
-  const sortField = sort.replace(/^-/, "") as "risk" | "confidence";
+  const sortField = sort.replace(/^-/, "") as "risk" | "confidence" | "window_start";
   const items = (data?.items ?? [])
     .filter((i) => !department || i.department === department)
     .slice()
-    .sort((a, b) => (b[sortField] ?? 0) - (a[sortField] ?? 0));
+    .sort((a, b) =>
+      sortField === "window_start"
+        ? new Date(b.window.start).getTime() - new Date(a.window.start).getTime()
+        : (b[sortField] ?? 0) - (a[sortField] ?? 0)
+    );
   const facets = data?.facets;
 
   const parentRef = useRef<HTMLDivElement>(null);
@@ -71,106 +76,134 @@ export function QueuePage() {
     overscan: 10,
   });
 
-  const departments = [...new Set((data?.items ?? []).map((i) => i.department).filter(Boolean))] as string[];
+  const departments = useMemo(
+    () => [...new Set((data?.items ?? []).map((i) => i.department).filter(Boolean))] as string[],
+    [data?.items]
+  );
+
+  const laneOptions: ThemeSelectOption[] = useMemo(
+    () =>
+      LANE_FILTERS.map((l) => ({
+        value: l,
+        label: l === "ALL" ? "All lanes" : LANES[l].word,
+        badgeDotColor:
+          l === "ALL"
+            ? undefined
+            : LANES[l].hex.startsWith("#")
+            ? LANES[l].hex
+            : "#716969",
+      })),
+    []
+  );
+
+  const stageOptions: ThemeSelectOption[] = useMemo(
+    () =>
+      STAGE_FILTERS.map((s) => ({
+        value: s.value !== undefined ? String(s.value) : "",
+        label: s.label,
+      })),
+    []
+  );
+
+  const departmentOptions: ThemeSelectOption[] = useMemo(
+    () => [
+      { value: "", label: "All departments" },
+      ...departments.map((d) => ({ value: d, label: d })),
+    ],
+    [departments]
+  );
+
+  const sortOptions: ThemeSelectOption[] = useMemo(
+    () => [
+      { value: "-risk", label: "Risk" },
+      { value: "-confidence", label: "Confidence" },
+      { value: "-window_start", label: "Most recent" },
+    ],
+    []
+  );
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-3">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-(--color-accent)/10">
-          <Inbox className="h-4.5 w-4.5 text-(--color-accent)" aria-hidden />
-        </span>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Triage queue</h1>
-          <p className="text-sm text-(--color-ink-secondary)">
-            {facets ? (
-              <>
-                {facets.lane?.AUTO_FLAG ?? 0} auto-flagged · {facets.lane?.ANALYST_REVIEW ?? 0} awaiting review · {facets.lane?.MONITOR ?? 0} monitored
-              </>
-            ) : (
-              <Skeleton inline className="h-4 w-72" />
-            )}
-          </p>
-        </div>
+    <div className="flex flex-col gap-6">
+      {/* Centered Page Header: Akira Heading & Mont Subheading */}
+      <div className="flex flex-col items-center justify-center text-center pt-2 pb-2">
+        <SplitHeading text="TRIAGE QUEUE" />
+        <p className="mt-3 font-mont font-light text-xs sm:text-[13px] tracking-[0.2em] uppercase text-[#BCABAE]">
+          {facets ? (
+            <>
+              {facets.lane?.AUTO_FLAG ?? 0} auto-flagged · {facets.lane?.ANALYST_REVIEW ?? 0} awaiting review · {facets.lane?.MONITOR ?? 0} monitored
+            </>
+          ) : (
+            <Skeleton inline className="h-4 w-72 mx-auto" />
+          )}
+        </p>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-(--color-hairline) bg-(--color-surface) px-3 py-2">
-        <select
-          aria-label="Filter by lane"
-          value={lane}
-          onChange={(e) => updateParam("lane", e.target.value === "ALL" ? undefined : e.target.value)}
-          className="rounded-md border border-(--color-hairline) bg-(--color-surface-raised) px-2 py-1.5 text-sm"
-        >
-          {LANE_FILTERS.map((l) => (
-            <option key={l} value={l}>
-              {l === "ALL" ? "All lanes" : LANES[l].word}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label="Filter by maximum kill-chain stage"
-          value={stageMax ?? ""}
-          onChange={(e) => updateParam("stage_max", e.target.value || undefined)}
-          className="rounded-md border border-(--color-hairline) bg-(--color-surface-raised) px-2 py-1.5 text-sm"
-        >
-          {STAGE_FILTERS.map((s) => (
-            <option key={s.label} value={s.value ?? ""}>
-              {s.label}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label="Filter by department"
-          value={department}
-          onChange={(e) => updateParam("department", e.target.value || undefined)}
-          className="rounded-md border border-(--color-hairline) bg-(--color-surface-raised) px-2 py-1.5 text-sm"
-        >
-          <option value="">All departments</option>
-          {departments.map((d) => (
-            <option key={d} value={d}>
-              {d}
-            </option>
-          ))}
-        </select>
-        <div className="ml-auto flex items-center gap-2 text-sm text-(--color-ink-secondary)">
-          <span id="queue-sort-label">Sort:</span>
-          <select aria-labelledby="queue-sort-label" value={sort} onChange={(e) => updateParam("sort", e.target.value === "-risk" ? undefined : e.target.value)} className="rounded-md border border-(--color-hairline) bg-(--color-surface-raised) px-2 py-1.5">
-            <option value="-risk">Risk</option>
-            <option value="-confidence">Confidence</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-(--color-hairline) bg-(--color-surface-raised)">
-        {isError && <ErrorState title="Could not load the triage queue." />}
-        {!isError && isLoading && (
-          <div>
-            {Array.from({ length: 8 }, (_, i) => (
-              <IncidentRowSkeleton key={i} />
-            ))}
+      {/* Glassmorphic Container for Filters and Incident Table */}
+      <div className="glass-container rounded-2xl overflow-hidden">
+        {/* Filter Bar with Animated Theme Dropdowns */}
+        <div className="flex flex-wrap items-center gap-3 border-b border-white/[0.12] px-5 py-3.5 bg-white/[0.03] backdrop-blur-xl">
+          <ThemeSelect
+            ariaLabel="Filter by lane"
+            value={lane}
+            onValueChange={(val) => updateParam("lane", val === "ALL" ? undefined : val)}
+            options={laneOptions}
+          />
+          <ThemeSelect
+            ariaLabel="Filter by maximum kill-chain stage"
+            value={stageMax !== undefined ? String(stageMax) : ""}
+            onValueChange={(val) => updateParam("stage_max", val || undefined)}
+            options={stageOptions}
+          />
+          <ThemeSelect
+            ariaLabel="Filter by department"
+            value={department}
+            onValueChange={(val) => updateParam("department", val || undefined)}
+            options={departmentOptions}
+          />
+          <div className="ml-auto flex items-center gap-2 text-sm text-[#BCABAE]">
+            <span id="queue-sort-label" className="text-xs uppercase tracking-wider font-mont font-medium text-[#BCABAE]/80">Sort:</span>
+            <ThemeSelect
+              ariaLabel="Sort incidents"
+              value={sort}
+              onValueChange={(val) => updateParam("sort", val === "-risk" ? undefined : val)}
+              options={sortOptions}
+            />
           </div>
-        )}
-        {!isError && !isLoading && items.length === 0 && (
-          <EmptyState title={`No open incidents in this window. ${data?.total ?? 0} user-days were scored and stayed below the alert threshold.`} />
-        )}
-        {!isError && items.length > 0 && (
-          <div ref={parentRef} className={cn("overflow-auto")} style={{ height: "70vh" }}>
-            <div style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
-              {virtualizer.getVirtualItems().map((virtualRow) => {
-                const item = items[virtualRow.index];
-                return (
-                  <div
-                    key={item.incident_id}
-                    ref={virtualizer.measureElement}
-                    data-index={virtualRow.index}
-                    style={{ position: "absolute", top: 0, left: 0, width: "100%", transform: `translateY(${virtualRow.start}px)` }}
-                  >
-                    <IncidentRow item={item} />
-                  </div>
-                );
-              })}
+        </div>
+
+        {/* Incidents Table / Virtualized Rows */}
+        <div className="bg-transparent">
+          {isError && <ErrorState title="Could not load the triage queue." />}
+          {!isError && isLoading && (
+            <div>
+              {Array.from({ length: 8 }, (_, i) => (
+                <IncidentRowSkeleton key={i} />
+              ))}
             </div>
-          </div>
-        )}
+          )}
+          {!isError && !isLoading && items.length === 0 && (
+            <EmptyState title={`No open incidents in this window. ${data?.total ?? 0} user-days were scored and stayed below the alert threshold.`} />
+          )}
+          {!isError && items.length > 0 && (
+            <div ref={parentRef} className={cn("overflow-auto")} style={{ height: "70vh" }}>
+              <div style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
+                {virtualizer.getVirtualItems().map((virtualRow) => {
+                  const item = items[virtualRow.index];
+                  return (
+                    <div
+                      key={item.incident_id}
+                      ref={virtualizer.measureElement}
+                      data-index={virtualRow.index}
+                      style={{ position: "absolute", top: 0, left: 0, width: "100%", transform: `translateY(${virtualRow.start}px)` }}
+                    >
+                      <IncidentRow item={item} />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -44,7 +44,7 @@ export function UserPage() {
         </p>
       </div>
 
-      <section className="rounded-lg border border-(--color-hairline) bg-(--color-surface-raised) p-4">
+      <section className="glass-card rounded-2xl p-5">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-medium text-(--color-ink-secondary)">Risk over time</h2>
           {risk?.summary && (
@@ -57,7 +57,7 @@ export function UserPage() {
         {points.length > 0 ? <RiskTrendChart points={points} /> : <p className="py-8 text-center text-sm text-(--color-ink-muted)">No scored days in this window.</p>}
       </section>
 
-      <section className="rounded-lg border border-(--color-hairline) bg-(--color-surface-raised) p-4">
+      <section className="glass-card rounded-2xl p-5">
         {user.baseline?.working_window?.start_min != null && user.baseline?.working_window?.end_min != null ? (
           <WorkingWindowBar startMin={user.baseline.working_window.start_min} endMin={user.baseline.working_window.end_min} />
         ) : (
@@ -67,8 +67,8 @@ export function UserPage() {
         )}
       </section>
 
-      <section className="rounded-lg border border-(--color-hairline) bg-(--color-surface-raised)">
-        <h2 className="border-b border-(--color-hairline) px-4 py-3 text-sm font-medium text-(--color-ink-secondary)">
+      <section className="glass-card rounded-2xl overflow-hidden">
+        <h2 className="border-b border-white/10 px-5 py-3.5 text-sm font-medium text-(--color-ink-secondary)">
           Incidents ({incidents?.total ?? 0})
         </h2>
         {(incidents?.items ?? []).map((inc) => (
