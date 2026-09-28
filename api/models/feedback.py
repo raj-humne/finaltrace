@@ -16,7 +16,7 @@ class Review(Base):
     )
 
     review_id: Mapped[int] = mapped_column(big_serial(), primary_key=True, autoincrement=True)
-    incident_id: Mapped[str] = mapped_column(ForeignKey("incidents.incident_id"), nullable=False)
+    incident_id: Mapped[str] = mapped_column(ForeignKey("incidents.incident_id"), nullable=False, index=True)
     verdict: Mapped[str] = mapped_column(String, nullable=False)
     note: Mapped[str | None] = mapped_column(String)
     analyst_id: Mapped[str] = mapped_column(String, nullable=False)
@@ -39,7 +39,7 @@ class Suppression(Base):
     cohort_key: Mapped[str | None] = mapped_column(String)
     rule_id: Mapped[str | None] = mapped_column(String)
     reason: Mapped[str] = mapped_column(String, nullable=False)
-    source_review: Mapped[int | None] = mapped_column(ForeignKey("reviews.review_id"))
+    source_review: Mapped[int | None] = mapped_column(ForeignKey("reviews.review_id"), index=True)
     status: Mapped[str] = mapped_column(String, nullable=False, default="proposed")
     created_by: Mapped[str] = mapped_column(String, nullable=False)
     created_at: Mapped[dt.datetime] = mapped_column(

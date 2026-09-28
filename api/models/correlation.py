@@ -36,7 +36,7 @@ class Incident(Base):
     )
 
     incident_id: Mapped[str] = mapped_column(String, primary_key=True)
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.user_id"), nullable=False)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.user_id"), nullable=False, index=True)
     window_start: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     window_end: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     risk: Mapped[float] = mapped_column(nullable=False)
@@ -74,7 +74,7 @@ class IncidentEvent(Base):
     incident_id: Mapped[str] = mapped_column(
         ForeignKey("incidents.incident_id", ondelete="CASCADE"), primary_key=True
     )
-    event_id: Mapped[str] = mapped_column(ForeignKey("events.event_id"), primary_key=True)
+    event_id: Mapped[str] = mapped_column(ForeignKey("events.event_id"), primary_key=True, index=True)
     node_role: Mapped[str] = mapped_column(String, nullable=False)
 
 

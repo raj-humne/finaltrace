@@ -126,8 +126,20 @@ def resolve_session(db: Session, raw_token: str) -> Account:
     if account is None or not account.is_active:
         raise SessionInvalid("account no longer active")
 
-    row.last_seen_at = now
-    db.commit()
+    # This runs on EVERY authenticated request - every page load, every
+    # background /auth/me poll, every read-only GET - not just real user
+    # actions. Writing (and committing) on every single one of those made
+    # the session table one of the busiest writers in the whole app,
+    # competing for SQLite's single write lock against genuinely long
+    # operations like a live-demo injection - a plain page load could 500
+    # with "database is locked" for no reason related to what it was doing.
+    # The idle timeout only needs minute-level granularity (default 30 min),
+    # so skipping the write when the row was already touched recently costs
+    # nothing observable while cutting write volume by roughly two orders
+    # of magnitude under normal polling.
+    if as_utc(row.last_seen_at) + dt.timedelta(seconds=60) <= now:
+        row.last_seen_at = now
+        db.commit()
     return account
 
 

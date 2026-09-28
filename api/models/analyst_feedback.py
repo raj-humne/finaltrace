@@ -49,7 +49,7 @@ class AnalystFeedback(Base):
     )
 
     id: Mapped[int] = mapped_column(big_serial(), primary_key=True, autoincrement=True)
-    incident_id: Mapped[str] = mapped_column(ForeignKey("incidents.incident_id"), nullable=False)
+    incident_id: Mapped[str] = mapped_column(ForeignKey("incidents.incident_id"), nullable=False, index=True)
     analyst_id: Mapped[str] = mapped_column(String, nullable=False)
     verdict: Mapped[str] = mapped_column(String, nullable=False)
     reason_code: Mapped[str] = mapped_column(String, nullable=False)
@@ -135,5 +135,5 @@ class FeatureObservation(Base):
     feature_name: Mapped[str] = mapped_column(String, nullable=False)
     feature_value: Mapped[float] = mapped_column(Float, nullable=False)
     observed_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    source_incident_id: Mapped[str | None] = mapped_column(ForeignKey("incidents.incident_id"))
+    source_incident_id: Mapped[str | None] = mapped_column(ForeignKey("incidents.incident_id"), index=True)
     is_trusted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
