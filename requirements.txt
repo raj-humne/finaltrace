@@ -19,5 +19,5 @@ pytest>=8.0
 jsonschema>=4.20
 hypothesis>=6.100
 
-psycopg[binary]>=3.1  # postgres driver, used by docker-compose.yml's db service
+psycopg[binary]>=3.1  # postgres driver, only needed if SENTINEL_DB points at Postgres
 PyJWT>=2.8  # signs single-use incident verification tokens (api/verification.py)

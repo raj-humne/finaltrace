@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: sentineltrace-api
+    runtime: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt && alembic upgrade head"
+    startCommand: "uvicorn api.main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: SENTINEL_DB
+        value: sqlite:////opt/render/project/src/data/demo.db
+      - key: SENTINEL_COOKIE_SECURE
+        value: "true"
+      - key: SENTINEL_CORS_ORIGINS
+        sync: false  # set to your Vercel URL(s) after the first deploy, e.g. https://your-app.vercel.app
+      - key: SENTINEL_JWT_SECRET
+        generateValue: true
+    disk:
+      name: sentineltrace-data
+      mountPath: /opt/render/project/src/data
+      sizeGB: 1

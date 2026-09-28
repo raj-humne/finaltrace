@@ -61,7 +61,7 @@ A hybrid rule + anomaly detection engine that ingests five streams of enterprise
 
 ## Stack
 
-Python 3.11 · Pandas · scikit-learn · FastAPI · Pydantic v2 · SQLAlchemy · PostgreSQL (SQLite for demo) · React 18 + TypeScript + Tailwind + shadcn/ui · Recharts · react-force-graph · Docker Compose
+Python 3.11 · Pandas · scikit-learn · FastAPI · Pydantic v2 · SQLAlchemy · SQLite (demo) · React 18 + TypeScript + Tailwind + shadcn/ui · Recharts · react-force-graph
 
 ## Repository layout (target)
 
@@ -79,35 +79,34 @@ sentineltrace/
 ├── web/                       # React dashboard
 ├── data/                      # CERT r4.2 (gitignored) + precomputed artifacts
 ├── tests/
-└── docker-compose.yml
+└── run-local.ps1 / run-local.bat
 ```
 
 ## Quick start
 
-```bash
-docker compose up --build
+Runs locally, no Docker required. `SENTINEL_DB=sqlite:///./data/demo.db` drops
+Postgres entirely — the backend and frontend talk to a local SQLite file.
+
+```powershell
+./run-local.ps1
 ```
 
-Brings up `db` (Postgres), `api`, and `web`. Dashboard → `http://localhost:8080`
-· API docs → `http://localhost:8000/docs`. `web` proxies `/api` to `api` through
-nginx, so the browser only ever talks to one origin.
+(or `run-local.bat`). This launches the FastAPI backend on
+`http://localhost:8000` (docs at `/docs`) and the Vite dev server on
+`http://localhost:5173`, which proxies `/api` straight to the backend.
 
-There are no default credentials anywhere in this repo or image — create the
-first account once the containers are up:
+There are no default credentials anywhere in this repo — create the first
+account yourself:
 
 ```bash
-docker compose exec api python -m api.cli create-user \
+python -m api.cli create-user \
   --username you --display-name "Your Name" --role detection_engineer
 ```
 
-To (re-)run the real detection pipeline and evaluation report against
-`./data/raw` (not part of the default `up` — this is a deliberate, separate
-action, since a full run against the real corpus takes minutes):
+To (re-)run the real detection pipeline and evaluation report against a raw
+log corpus (e.g. `./data/raw` or `./data/demo_live`) and load the results
+into the demo database:
 
 ```bash
-docker compose --profile pipeline run --build runner
+python -m api.load_pipeline --raw-dir data/demo_live
 ```
-
-For a laptop without Docker: `SENTINEL_DB=sqlite:///./data/demo.db` in the
-environment drops Postgres entirely and `uvicorn api.main:app --reload` plus
-`npm run dev` (in `web/`) run everything locally instead.
