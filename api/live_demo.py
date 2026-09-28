@@ -59,14 +59,43 @@ DEMO_USER_ID = "AA0000"
 DEMO_OWN_PC = "PC-1000"
 DEMO_FOREIGN_PC = "PC-1009"  # a real peer's PC in the generated dataset, for "on a workstation that isn't theirs"
 DEMO_TS = "%m/%d/%Y %H:%M:%S"
-# The generated baseline runs through 2010-03-05 (see the module docstring's
-# dataset). Injected events must be anchored just after that, not at the
-# real wall-clock "now" - the demo employee's 30-day trailing baseline and
-# every z_self/z_peer feature are computed relative to event dates, so an
-# anchor 16 real-world years away from the baseline leaves those windows
+# Injected events must be anchored just after the baseline dataset's own
+# last event, not at the real wall-clock "now" - the demo employee's 30-day
+# trailing baseline and every z_self/z_peer feature are computed relative to
+# event dates, so an anchor far away from the baseline leaves those windows
 # empty and produces a weak, unrealistic score instead of the dramatic one
 # a live-off-hours-logon-plus-first-ever-USB sequence should actually earn.
-DEMO_BASE_ANCHOR = dt.datetime(2010, 3, 8, 21, 47, 0)
+#
+# Rather than a hardcoded date (the dataset was originally generated ending
+# 2010-03-05, which ages into an increasingly absurd "16 years ago" anchor
+# the longer this repo lives), this reads _original's own max timestamp at
+# import time and adds the fixed historical gap - so running
+# tools/shift_demo_live_dates.py to move the dataset itself keeps this
+# correct automatically, no code change required alongside it.
+_ANCHOR_GAP = dt.timedelta(days=3, hours=2, minutes=33)  # historical: 2010-03-08 21:47 minus 2010-03-05 19:14
+
+
+def _compute_base_anchor() -> dt.datetime:
+    backup_dir = REPO_ROOT / "data" / "demo_live" / "_original"
+    latest = None
+    for name in ("logon", "device", "file", "http", "email"):
+        path = backup_dir / f"{name}.csv"
+        if not path.exists():
+            continue
+        with path.open(newline="", encoding="utf-8") as fh:
+            for row in csv.DictReader(fh):
+                try:
+                    ts = dt.datetime.strptime(row["date"], DEMO_TS)
+                except (KeyError, ValueError):
+                    continue
+                if latest is None or ts > latest:
+                    latest = ts
+    if latest is None:
+        return dt.datetime(2010, 3, 8, 21, 47, 0)  # fallback: _original missing entirely
+    return latest + _ANCHOR_GAP
+
+
+DEMO_BASE_ANCHOR = _compute_base_anchor()
 
 # The one write lock for this demo's CSVs + the DB rows this endpoint owns.
 # A live demo is one operator at a time by nature; this only guards against
