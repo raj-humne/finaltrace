@@ -48,7 +48,7 @@ export function VerifyTokenPage() {
       setError(detail || "This token could not be verified.");
       return;
     }
-    setResult(data);
+    setResult(data ?? null);
   }
 
   return (

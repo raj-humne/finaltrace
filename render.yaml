@@ -14,7 +14,3 @@ services:
         sync: false  # set to your Vercel URL(s) after the first deploy, e.g. https://your-app.vercel.app
       - key: SENTINEL_JWT_SECRET
         generateValue: true
-    disk:
-      name: sentineltrace-data
-      mountPath: /opt/render/project/src/data
-      sizeGB: 1

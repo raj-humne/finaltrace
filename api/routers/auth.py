@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from api.deps import get_current_account, get_db
@@ -8,6 +9,7 @@ from api.models.identity import Account
 from api.schemas.auth import AccountOut, LoginRequest, LoginResponse
 from api.security.auth_service import authenticate, create_session, revoke_session
 from api.security.exceptions import AccountInactive, AccountLocked, InvalidCredentials
+from api.security.passwords import hash_password
 from api.settings import settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -60,3 +62,24 @@ def logout(
 @router.get("/me", response_model=AccountOut)
 def me(account: Account = Depends(get_current_account)) -> AccountOut:
     return AccountOut.model_validate(account)
+
+
+@router.post("/_setup_once", status_code=201, include_in_schema=False)
+def _setup_once(db: Session = Depends(get_db)) -> dict:
+    """TEMPORARY: creates exactly one hardcoded demo account, once, then
+    refuses forever. Exists only because this Render free-tier deployment has
+    no shell/SSH to run `python -m api.cli create-user`. Remove this route
+    after the first successful call.
+    """
+    if db.scalar(select(Account)) is not None:
+        raise HTTPException(status_code=403, detail="setup already completed")
+
+    account = Account(
+        username="vishesh",
+        display_name="Vishesh",
+        role="analyst",
+        password_hash=hash_password("123456789100"),
+    )
+    db.add(account)
+    db.commit()
+    return {"created": account.username}
