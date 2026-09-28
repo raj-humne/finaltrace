@@ -218,7 +218,7 @@ export function CorrelationGraph({ nodes, edges, selectedId, onSelect, overDense
         const linkForce = fg.d3Force("link");
         linkForce?.strength((l: FGLink) => (l.type === "temporal" ? 0.02 : 0.85));
         linkForce?.distance((l: FGLink) => (l.type === "temporal" ? 26 : 70));
-        fg.d3Force("charge")?.strength(-90);
+        fg.d3Force("charge")?.strength(-140);
         // A tight burst (e.g. 45 file events within one ten-minute window,
         // linked only by the weak temporal spine to their neighbors) has
         // almost nothing pulling them apart, so charge alone left them
@@ -226,7 +226,7 @@ export function CorrelationGraph({ nodes, edges, selectedId, onSelect, overDense
         // shapes, not a readable cluster. A collision force gives every
         // node a hard personal-space radius so the simulation can't settle
         // with two dots occupying the same pixel.
-        fg.d3Force("collide", forceCollide((n: FGNode) => (n.has_signal ? 9 : 6.5)));
+        fg.d3Force("collide", forceCollide((n: FGNode) => (n.has_signal ? 12 : 9)));
         fg.d3ReheatSimulation();
         // Without a re-frame the camera stays on the previous (temporal)
         // layout's tight bounding box while the force simulation spreads
@@ -286,6 +286,17 @@ export function CorrelationGraph({ nodes, edges, selectedId, onSelect, overDense
           linkCanvasObjectMode={() => "after"}
           linkCanvasObject={(l: FGLink, ctx: CanvasRenderingContext2D) => {
             if (l.type === "temporal") return; // too many to label individually - hover shows the name instead
+            // Labeling every stage_advance/shared_pc/shared_file edge
+            // unconditionally reads fine on a sparse incident but produces
+            // dozens of stacked, illegible copies of the same string on a
+            // dense one (a real cluster here had ~40 stage_advance edges,
+            // all labeled "kill-chain stage advance" on top of each other).
+            // The legend below already spells out what each line style
+            // means, so only the edges touching the active/hovered node
+            // need their label drawn on canvas - everyone else still gets
+            // it via the linkLabel hover tooltip.
+            const isActive = activeId != null && (endpointId(l.source) === activeId || endpointId(l.target) === activeId);
+            if (!isActive) return;
             const a = endpointXY(l.source);
             const b = endpointXY(l.target);
             if (!a || !b) return;
