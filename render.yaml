@@ -3,8 +3,8 @@ services:
     name: sentineltrace-api
     runtime: python
     plan: free
-    buildCommand: "pip install -r requirements.txt && alembic upgrade head"
-    startCommand: "uvicorn api.main:app --host 0.0.0.0 --port $PORT"
+    buildCommand: "pip install -r requirements.txt && python -m api.bootstrap"
+    startCommand: "python -m api.bootstrap && uvicorn api.main:app --host 0.0.0.0 --port $PORT"
     envVars:
       - key: SENTINEL_DB
         value: sqlite:////opt/render/project/src/data/demo.db
@@ -14,3 +14,7 @@ services:
         sync: false  # set to your Vercel URL(s) after the first deploy, e.g. https://your-app.vercel.app
       - key: SENTINEL_JWT_SECRET
         generateValue: true
+      - key: SENTINEL_BOOTSTRAP_USERNAME
+        sync: false  # login account api.bootstrap creates on a fresh DB
+      - key: SENTINEL_BOOTSTRAP_PASSWORD
+        sync: false
